@@ -140,6 +140,7 @@ body[data-hand="R"]{--hand-c:var(--hand-r)}
 
 /* ---------- forms ---------- */
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px 18px;margin-bottom:18px}
+.grid>div{display:flex;flex-direction:column;justify-content:flex-end}
 label{display:block;font-size:13px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;letter-spacing:.01em}
 input[type=number],input[type=time],select{width:100%;font:inherit;font-weight:600;font-variant-numeric:tabular-nums;
   padding:10px 11px;border:1.5px solid var(--hair);background:var(--surface);border-radius:var(--r-sm);color:var(--ink);
@@ -389,7 +390,8 @@ body.run.done .cue{font-size:16px;color:var(--ink)}
       <select id="fHands"><option value="alt">Alternating L/R</option><option value="L">Left only</option><option value="R">Right only</option></select></div>
     <div><label for="fPct">Intensity (% of max)</label><input type="number" id="fPct" value="32" min="10" max="98"></div>
     <div><label for="fWork">Hold (s)</label><input type="number" id="fWork" value="10" min="3" max="60"></div>
-    <div><label for="fRest">Rest between reps (s)</label><input type="number" id="fRest" value="20" min="5" max="300"></div>
+    <div id="wrapSwap"><label for="fSwap">Hand switch (s)</label><input type="number" id="fSwap" value="5" min="2" max="120"></div>
+    <div><label for="fRest">Rest after both hands (s)</label><input type="number" id="fRest" value="20" min="5" max="300"></div>
     <div><label for="fTol">Target zone ±%</label><input type="number" id="fTol" value="12" min="3" max="40"></div>
     <div id="wrapReps" style="display:none"><label for="fReps">Reps per hand</label><input type="number" id="fReps" value="10" min="1" max="30"></div>
   </div>
@@ -641,15 +643,15 @@ const GRIPS={
   m2c:{label:"Middle two, half crimp",   mult:0.45}
 };
 const PRESETS={
-  rehab:{pct:32,work:10,rest:20,blocks:[["hc",3],["d3",3]],
-    text:"Half crimp and three-finger drag only. The two-finger grips are removed because they concentrate the load on individual pulleys. Lower intensity than the study, twelve reps, around six minutes."},
-  study:{pct:40,work:10,rest:20,blocks:[["hc",3],["d3",3],["f2o",1],["m2o",1],["f2c",1],["m2c",1]],
-    text:"The study's grip sequence, halved per hand so that one alternating round lands on twenty reps and around ten minutes."},
-  emil:{pct:40,work:10,rest:50,blocks:[["hc",3],["d3",3],["f2o",1],["m2o",1],["f2c",1],["m2c",1]],
-    text:"Emil's original fifty-second rest. The session runs around twenty minutes."},
-  maxhang:{pct:85,work:10,rest:120,blocks:[["hc",6]],
-    text:"Six reps of ten seconds at 85–95 percent of measured hold strength, two minutes of rest. This part drove the largest single effect in the study."},
-  custom:{pct:40,work:10,rest:30,blocks:null,text:"Free protocol with half crimp only."}
+  rehab:{pct:32,work:10,swap:5,rest:20,blocks:[["hc",3],["d3",3]],
+    text:"Half crimp and three-finger drag only. The two-finger grips are removed because they concentrate the load on individual pulleys. Lower intensity than the study."},
+  study:{pct:40,work:10,swap:5,rest:20,blocks:[["hc",3],["d3",3],["f2o",1],["m2o",1],["f2c",1],["m2c",1]],
+    text:"The study's grip sequence, halved per hand so that one alternating round lands on twenty reps."},
+  emil:{pct:40,work:10,swap:5,rest:50,blocks:[["hc",3],["d3",3],["f2o",1],["m2o",1],["f2c",1],["m2c",1]],
+    text:"Emil's original fifty-second rest between rounds."},
+  maxhang:{pct:85,work:10,swap:20,rest:120,blocks:[["hc",6]],
+    text:"Six reps of ten seconds at 85–95 percent of measured hold strength, two minutes of rest. This part drove the largest single effect in the study. The hand switch is longer here — at this load you want to be settled on the edge before you pull."},
+  custom:{pct:40,work:10,swap:5,rest:30,blocks:null,text:"Free protocol with half crimp only."}
 };
 const DAYS=[
   {d:"Mon",type:"boulder"},{d:"Tue",type:"abra"},{d:"Wed",type:"boulder"},
@@ -781,26 +783,35 @@ function targetFor(edge,hand,grip,pct){
   const r=refMax(edge,hand);
   return r?r.v*(pct/100)*GRIPS[grip].mult:null;
 }
+/* Ett rep är ett håll, och vilan efter det beror på var i paret hållet
+   ligger: byter man bara hand väntar nästa hand direkt, så där räcker
+   några sekunder. Den långa vilan hör hemma efter att båda händerna
+   gjort sitt — det är då underarmen faktiskt får återhämta sig. */
 function buildPlan(){
   const p=preset();
   const edge=$("fEdge").value, hands=$("fHands").value;
   const work=+$("fWork").value, rest=+$("fRest").value, pct=+$("fPct").value;
+  const swap=+$("fSwap").value;
   const blocks=p.blocks||[["hc",+$("fReps").value]];
   const handList=hands==="alt"?["L","R"]:[hands];
   const plan=[];
   for(const [g,n] of blocks)
     for(let i=0;i<n;i++)
-      for(const h of handList)
-        plan.push({grip:g,hand:h,edge,work,rest,target:targetFor(edge,h,g,pct)});
+      handList.forEach((h,k)=>plan.push({grip:g,hand:h,edge,work,
+        rest:k<handList.length-1?swap:rest,
+        target:targetFor(edge,h,g,pct)}));
   return plan;
 }
 function syncPreset(){
   const p=preset();
-  $("fPct").value=p.pct; $("fWork").value=p.work; $("fRest").value=p.rest;
-  $("wrapReps").style.display=p.blocks?"none":"";
+  $("fPct").value=p.pct; $("fWork").value=p.work; $("fRest").value=p.rest; $("fSwap").value=p.swap;
   refresh();
 }
-function refresh(){ renderPlanInfo(); renderPlanTable(); renderReps(); }
+function syncFields(){
+  $("wrapReps").style.display=preset().blocks?"none":"";
+  $("wrapSwap").style.display=$("fHands").value==="alt"?"":"none";   // bara en hand, inget byte
+}
+function refresh(){ syncFields(); renderPlanInfo(); renderPlanTable(); renderReps(); }
 
 function renderPlanInfo(){
   const box=$("planInfo");
@@ -820,11 +831,20 @@ function renderPlanInfo(){
   const plan=buildPlan();
   const derived=need.some(h=>{const r=refMax(edge,h);return r&&r.derived;});
   const work=plan.length*plan[0].work;
-  const total=plan.reduce((a,r)=>a+r.work+r.rest,0);
+  /* Sista repets vila körs aldrig, och passet inleds med en förberedelse —
+     annars ligger uppskattningen en dryg minut fel på ett långt pass. */
+  const total=5+plan.reduce((a,r,i)=>a+r.work+(i<plan.length-1?r.rest:0),0);
+  const alt=hands==="alt";
+  const swap=+$("fSwap").value, gap=+$("fRest").value;
+  const rhythm=alt
+    ? `Left, ${swap} s, right, ${gap} s, and round again — so each hand gets `
+      +`${swap+plan[0].work+gap} seconds between two of its own reps.`
+    : `${gap} seconds between every rep, all on the same hand.`;
   box.className="note";
   box.innerHTML=preset().text+
     (edge==="10"?"<br><br><b>10 mm sits outside the evidence</b> — neither the study nor Emil's original went below 18 mm for submaximal work.":"")+
     (derived?"<br><br>The target for the injured hand is derived from the healthy one. That probably underestimates its capacity slightly, which is the right direction to err in.":"")+
+    `<br><br>${rhythm}`+
     `<br><br>${plan.length} reps · ${work} seconds under load · ${Math.round(total/60)} minutes in total.`;
 }
 function renderPlanTable(){
@@ -841,7 +861,7 @@ function renderPlanTable(){
     <th>Target ${hl.length>1?"L / R":""}</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 $("fProg").addEventListener("change",syncPreset);
-["fEdge","fHands","fPct","fWork","fRest","fTol","fReps"].forEach(id=>$(id).addEventListener("input",refresh));
+["fEdge","fHands","fPct","fWork","fSwap","fRest","fTol","fReps"].forEach(id=>$(id).addEventListener("input",refresh));
 $("fPhase").addEventListener("change",()=>{
   $("fProg").value=phase()==="rehab"?"rehab":"study"; syncPreset(); renderWeek();
 });
@@ -1083,7 +1103,7 @@ function loopSession(){
     setHand(n?n.hand:null,"Next");
     cueEl.textContent=n?GRIPS[n.grip].label:"";
     clock.textContent=pad2(Math.ceil(left)); clock.className="clock rest";
-    if(left<=0){ beep(760,180); enterPhase("prep",3); renderReps(); } else tickBeep(left);
+    if(left<=0){ enterPhase("prep",PREP); renderReps(); }
   }
   session.raf=requestAnimationFrame(loopSession);
 }
@@ -1102,10 +1122,17 @@ function finishRep(){
   session.doneReps++; session.zoneAcc+=zone;
   renderLog(); saveStore(); nextRep();
 }
+/* Vilan man ställer in är hela glappet fram till nästa drag, och de sista
+   PREP sekunderna av det är "Get ready". Annars blir en inställd femma i
+   praktiken åtta, och nedräkningen hörs två gånger — en gång i vilan och
+   en gång i förberedelsen. */
+const PREP=3;
 function nextRep(){
   const rep=currentRep(); session.i++;
   if(session.i>=session.plan.length){ renderReps(); stopSession(true); return; }
-  renderReps(); enterPhase("rest",rep.rest);
+  renderReps();
+  if(rep.rest>PREP) enterPhase("rest",rep.rest-PREP);
+  else enterPhase("prep",Math.max(1,rep.rest));
 }
 function stopSession(done){
   session.running=false; session.finished=!!done; cancelAnimationFrame(session.raf);
@@ -1312,7 +1339,7 @@ function makeChart(cv){
    the page is static, so there is no server to upload it to. */
 const STORE_KEY="abrahangs.v1";
 const SETTING_IDS=["fPhase","fInjured","fPerDay","fAm","fPm","fProg","fEdge","fHands",
-  "fPct","fWork","fRest","fTol","fReps","fBw","mEdge","mHand","mDur"];
+  "fPct","fWork","fSwap","fRest","fTol","fReps","fBw","mEdge","mHand","mDur"];
 let storageOK=true;
 function saveStore(){
   if(!storageOK) return;
@@ -1336,7 +1363,6 @@ function restore(){
     const el=$(id), v=d.settings[id];
     if(el&&v!=null&&v!=="") el.value=v;
   }
-  $("wrapReps").style.display=preset().blocks?"none":"";
   return true;
 }
 function forgetAll(){
