@@ -89,7 +89,12 @@ p.lede{color:var(--ink-soft);margin:0 0 16px;max-width:64ch;font-size:15px}
 .readout{display:flex;flex-direction:column;justify-content:flex-end;min-height:var(--meter-h)}
 .phase{font-family:"Outfit",sans-serif;font-weight:600;font-size:15px;color:var(--grape);
   align-self:flex-start;margin:0 auto auto 0;padding:6px 14px;border-radius:99px;
+  max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   background:rgba(108,77,246,.10);border:1px solid var(--grape-soft)}
+/* Greppraden har fast höjd och bryts aldrig — annars flyttar sig klockan
+   under den varje gång greppnamnet byter längd. */
+.cue{font-size:14px;font-weight:600;color:var(--ink-soft);margin-bottom:4px;
+  min-height:1.45em;line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .clock{font-family:"Outfit",sans-serif;font-weight:700;font-size:clamp(56px,16vw,100px);line-height:.86;font-variant-numeric:tabular-nums;margin-bottom:12px;letter-spacing:-.03em}
 .clock.work{color:var(--grape)}.clock.rest{color:var(--sky)}
 .force{font-family:"Outfit",sans-serif;font-weight:700;font-size:clamp(38px,10vw,60px);line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
@@ -179,6 +184,61 @@ td.g{font-variant-numeric:normal;font-weight:600}
   .slot{grid-template-columns:46px 1fr;row-gap:8px}
   .slot .btn{grid-column:2;justify-self:start}
 }
+/* ---------- körläge ----------
+   Under ett pass tar mätaren över hela viewporten: inget att scrolla,
+   inga inställningar under, och samma layout hela vägen genom passet. */
+body.run{overflow:hidden}
+body.run .wrap{position:fixed;inset:0;max-width:none;display:flex;flex-direction:column;
+  padding:calc(env(safe-area-inset-top) + 14px) calc(env(safe-area-inset-right) + 16px)
+          calc(env(safe-area-inset-bottom) + 14px) calc(env(safe-area-inset-left) + 16px);
+  animation:fade .18s ease both}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+body.run .bar{margin-bottom:12px;padding-bottom:10px}
+body.run nav{display:none}
+body.run .view:not(#v-pass){display:none}
+body.run #v-pass{display:flex;flex-direction:column;flex:1;min-height:0;animation:none}
+body.run #v-pass>:not(#runzone){display:none}
+body.run #runzone{display:flex;flex-direction:column;gap:12px;flex:1;min-height:0}
+body.run .stage{flex:1;min-height:0;margin-bottom:0;grid-template-rows:1fr}
+/* i helskärm samlas siffrorna som ett block i mitten istället för att
+   pillret klistras i taket och resten i golvet */
+body.run .readout{min-height:0;justify-content:center}
+body.run .phase{margin:0 auto 16px 0}
+body.run #btnConnect{display:none}
+body.run .chart{height:auto;min-height:110px}
+body.run .reps{margin:0}
+body.run #runctl{margin:0}
+body.run #btnStart{display:none}
+#btnDone{display:none}
+body.run.done #btnDone{display:inline-block}
+body.run.done #btnSkip,body.run.done #btnStop{display:none}
+body.run.done .clock,body.run.done #tline{display:none}   /* nedräkning och mål är inte längre aktuella */
+body.run.done .cue{font-size:16px;color:var(--ink)}
+@media(max-width:560px){
+  body.run .stage{grid-template-rows:auto 1fr}
+  body.run .mark{font-size:21px}
+  body.run .status{font-size:12.5px}
+  body.run .phase{margin-bottom:10px}
+  body.run .wrap{padding-left:calc(env(safe-area-inset-left) + 12px);
+                 padding-right:calc(env(safe-area-inset-right) + 12px)}
+}
+@media(max-height:680px){          /* låg skärm: siffrorna får aldrig växa förbi den vanliga storleken */
+  body.run .clock{font-size:clamp(38px,min(11vh,13vw),68px)}
+  body.run .force{font-size:clamp(26px,min(7vh,9vw),44px)}
+  body.run .cue{font-size:13px}
+  body.run .bar{margin-bottom:8px}
+  body.run .stage{padding:14px}
+}
+@media(max-height:520px){          /* liggande telefon: allt måste rymmas utan att kapas */
+  body.run .readout{justify-content:safe center}
+  body.run .phase{font-size:13px;padding:3px 10px;margin-bottom:8px}
+  body.run .cue{font-size:12.5px;margin-bottom:2px}
+  body.run .clock{margin-bottom:6px}
+  body.run .force{font-size:clamp(22px,min(7vh,8vw),34px)}
+  body.run .target-line{font-size:12.5px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body.run .stage{padding:12px}
+  body.run .reps{display:none}     /* repräknaren står i fasrutan när chipsen inte får plats */
+}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -231,22 +291,27 @@ td.g{font-variant-numeric:normal;font-weight:600}
 
 <!-- ============ SESSION ============ -->
 <section class="view" id="v-pass">
-  <div class="stage">
-    <div class="readout">
-      <div class="phase" id="phase">Ready</div>
-      <div class="clock" id="clock">--</div>
-      <div class="force" id="force">0.0<small>kg</small></div>
-      <div class="target-line" id="tline">Target: <b>—</b></div>
+  <!-- allt inuti #runzone är det enda som syns i körläge -->
+  <div id="runzone">
+    <div class="stage">
+      <div class="readout">
+        <div class="phase" id="phase">Ready</div>
+        <div class="cue" id="cue"></div>
+        <div class="clock" id="clock">--</div>
+        <div class="force" id="force">0.0<small>kg</small></div>
+        <div class="target-line" id="tline">Target: <b>—</b></div>
+      </div>
+      <div class="chart"><canvas id="cvPass"></canvas></div>
     </div>
-    <div class="chart"><canvas id="cvPass"></canvas></div>
-  </div>
 
-  <div class="reps" id="reps"></div>
+    <div class="reps" id="reps"></div>
 
-  <div class="row">
-    <button class="btn primary big" id="btnStart">Start session</button>
-    <button class="btn big" id="btnStop" disabled>Stop</button>
-    <button class="btn ghost" id="btnSkip" disabled>Next</button>
+    <div class="row" id="runctl">
+      <button class="btn primary big" id="btnStart">Start session</button>
+      <button class="btn big" id="btnStop" disabled>Stop</button>
+      <button class="btn ghost" id="btnSkip" disabled>Next</button>
+      <button class="btn primary big" id="btnDone">Close</button>
+    </div>
   </div>
 
   <h2>Program</h2>
@@ -736,18 +801,24 @@ $("btnSaveMax").onclick=()=>{
 $("fBw").addEventListener("input",renderMax);
 
 /* ===================== The session ===================== */
-const session={running:false,plan:[],i:0,phase:"idle",t0:0,dur:0,raf:0,
-  samples:[],inZone:0,total:0,peak:0};
+const session={running:false,finished:false,plan:[],i:0,phase:"idle",t0:0,dur:0,raf:0,
+  samples:[],inZone:0,total:0,peak:0,doneReps:0,zoneAcc:0};
 function renderReps(){
   const el=$("reps");
-  const plan=session.running?session.plan:buildPlan();
-  el.innerHTML="";
-  plan.forEach((p,i)=>{
-    const d=document.createElement("div");
-    d.className="rep "+p.hand+(session.running&&i<session.i?" done":"")+
+  const plan=(session.running||session.finished)?session.plan:buildPlan();
+  if(el.children.length!==plan.length){              // bygg om bara när antalet ändras
+    el.innerHTML="";
+    plan.forEach(p=>{
+      const d=document.createElement("div");
+      d.title=GRIPS[p.grip].label;
+      el.appendChild(d);
+    });
+  }
+  plan.forEach((p,i)=>{                              // annars räcker det med klasserna,
+    const d=el.children[i];                          // så pulsen på nuvarande rep inte startas om
+    d.className="rep "+p.hand+((session.finished||(session.running&&i<session.i))?" done":"")+
       (session.running&&i===session.i?" now":"");
     d.title=GRIPS[p.grip].label;
-    el.appendChild(d);
   });
 }
 let wakeLock=null;
@@ -762,7 +833,9 @@ $("btnStart").onclick=async()=>{
   if(!bt.connected&&!demoMode){ await connect(); if(!bt.connected&&!demoMode) return; }
   const plan=buildPlan();
   if(plan.some(p=>!p.target)){ refresh(); $("planInfo").scrollIntoView({block:"center"}); return; }
-  session.plan=plan; session.i=0; session.running=true;
+  session.plan=plan; session.i=0; session.running=true; session.finished=false;
+  session.doneReps=0; session.zoneAcc=0;
+  $("cue").textContent="";
   beep(880,80);
   $("btnMax").disabled=true; lockNav();
   $("btnStart").disabled=true; $("btnStop").disabled=false; $("btnSkip").disabled=false;
@@ -773,15 +846,38 @@ $("btnStop").onclick=()=>stopSession(false);
 $("btnSkip").onclick=()=>{ if(session.running){ session.phase==="work"?finishRep():nextRep(); } };
 function enterPhase(p,secs){
   session.phase=p; session.t0=performance.now(); session.dur=secs;
-  if(p==="work"){ session.samples=[]; session.inZone=0; session.total=0; session.peak=0; }
+  if(p==="work"){
+    session.samples=[]; session.inZone=0; session.total=0; session.peak=0;
+    const rep=currentRep();
+    if(rep&&rep.target) tracePass.setScale(rep.target*2);   // målet hamnar mitt i rutan och står stilla
+  }
 }
-function lockNav(){ document.body.classList.toggle("in-session",session.running||mt.running); }
+/* Körläget: mätaren tar över hela skärmen så länge passet pågår, och ligger
+   kvar efteråt tills man stänger det — annars hinner man aldrig se resultatet. */
+function lockNav(){
+  const run=session.running||session.finished;
+  const changed=run!==document.body.classList.contains("run");
+  document.body.classList.toggle("in-session",session.running||mt.running);
+  document.body.classList.toggle("run",run);
+  document.body.classList.toggle("done",run&&!session.running);
+  if(changed) requestAnimationFrame(()=>{ tracePass.fit(); traceMax.fit(); idleDraw(); });
+}
+function closeRun(){
+  if(!session.finished) return;
+  session.finished=false; lockNav();
+  $("phase").textContent="Ready"; $("cue").textContent="";
+  $("clock").textContent="--"; $("clock").className="clock";
+  refresh();
+}
+$("btnDone").onclick=closeRun;
+const pad2=n=>(n<10?"0":"")+n;                       // fast antal siffror, annars kryper klockan i sidled
+const padDec=s=>s.length<4?"0"+s:s;
 function currentRep(){ return session.plan[session.i]; }
 function loopSession(){
   if(!session.running) return;
   const rep=currentRep();
   const left=Math.max(0,session.dur-(performance.now()-session.t0)/1000);
-  const clock=$("clock"), phaseEl=$("phase");
+  const clock=$("clock"), phaseEl=$("phase"), cueEl=$("cue");
   const tol=(+$("fTol").value)/100;
   let lo=null,hi=null;
   if(rep&&rep.target){
@@ -802,21 +898,26 @@ function loopSession(){
   if(viewOn("pass")) tracePass.draw({
     t0:holding?session.t0/1000:nowS-IDLE_SPAN,
     span:holding?session.dur:IDLE_SPAN,
-    lo,hi,target:rep?rep.target:null
+    lo,hi,target:rep?rep.target:null,
+    fixed:holding&&rep&&rep.target?rep.target*2:0
   });
   const hand=rep?(rep.hand==="L"?"left":"right"):"";
+  const count=" · "+Math.min(session.i+1,session.plan.length)+"/"+session.plan.length;
   if(session.phase==="prep"){
-    phaseEl.textContent=GRIPS[rep.grip].label+" · "+hand;
-    clock.textContent=Math.ceil(left); clock.className="clock";
+    phaseEl.textContent="Get set"+count;
+    cueEl.textContent=GRIPS[rep.grip].label+" · "+hand;
+    clock.textContent=pad2(Math.ceil(left)); clock.className="clock";
     if(left<=0){ beep(1100,260); enterPhase("work",rep.work); } else tickBeep(left);
   }else if(session.phase==="work"){
-    phaseEl.textContent="Hold · "+GRIPS[rep.grip].label+" · "+hand;
-    clock.textContent=left.toFixed(1); clock.className="clock work";
+    phaseEl.textContent="Hold"+count;
+    cueEl.textContent=GRIPS[rep.grip].label+" · "+hand;
+    clock.textContent=padDec(left.toFixed(1)); clock.className="clock work";
     if(left<=0) finishRep();
   }else if(session.phase==="rest"){
     const n=session.plan[session.i];
-    phaseEl.textContent=n?"Rest · next "+GRIPS[n.grip].label+", "+(n.hand==="L"?"left":"right"):"Rest";
-    clock.textContent=Math.ceil(left); clock.className="clock rest";
+    phaseEl.textContent="Rest"+count;
+    cueEl.textContent=n?"Next: "+GRIPS[n.grip].label+" · "+(n.hand==="L"?"left":"right"):"";
+    clock.textContent=pad2(Math.ceil(left)); clock.className="clock rest";
     if(left<=0){ beep(1100,200); enterPhase("prep",3); renderReps(); } else tickBeep(left);
   }
   session.raf=requestAnimationFrame(loopSession);
@@ -833,6 +934,7 @@ function finishRep(){
   const zone=session.total?session.inZone/session.total*100:0;
   log.push({tid:new Date().toISOString(),typ:$("fProg").value,grepp:rep.grip,list:rep.edge,
     hand:rep.hand,mal:rep.target,topp:session.peak,snitt:avg,izon:zone,sek:rep.work});
+  session.doneReps++; session.zoneAcc+=zone;
   renderLog(); saveStore(); nextRep();
 }
 function nextRep(){
@@ -841,11 +943,14 @@ function nextRep(){
   renderReps(); enterPhase("rest",rep.rest);
 }
 function stopSession(done){
-  session.running=false; cancelAnimationFrame(session.raf);
+  session.running=false; session.finished=!!done; cancelAnimationFrame(session.raf);
   $("btnStart").disabled=false; $("btnStop").disabled=true; $("btnSkip").disabled=true;
   $("btnMax").disabled=false;
   lockNav();
   $("phase").textContent=done?"Session complete":"Stopped";
+  $("cue").textContent=done&&session.doneReps
+    ? session.doneReps+" reps · "+Math.round(session.zoneAcc/session.doneReps)+" % in the target zone"
+    : "";
   $("clock").textContent="--"; $("clock").className="clock";
   $("force").className="force";
   keepAwake(false); renderReps();
@@ -929,7 +1034,11 @@ function makeChart(cv){
     if(o.hi) top=Math.max(top,o.hi*1.15);
     if(o.target) top=Math.max(top,o.target*1.5);
     for(const l of (o.lines||[])) if(l&&l.kg) top=Math.max(top,l.kg*1.12);
-    scale+=(top*1.12-scale)*0.10;
+    /* Under ett håll står skalan stilla på o.fixed, så kurvan inte glider
+       vertikalt precis när man ska läsa av om man ligger i zonen. Den vidgas
+       bara om man drar långt över målet. */
+    const want=o.fixed>0?Math.max(o.fixed,top*1.05):top*1.12;
+    scale+=(want-scale)*0.10;
     if(!isFinite(scale)||scale<1) scale=10;
 
     c.clearRect(0,0,W,H);
@@ -1018,7 +1127,8 @@ function makeChart(cv){
     }
     c.restore();
   }
-  return {draw,fit,recolor:readColors};
+  function setScale(v){ if(v>0&&isFinite(v)) scale=v; }
+  return {draw,fit,setScale,recolor:readColors};
 }
 
 /* ===================== Local storage ===================== */
@@ -1076,6 +1186,11 @@ function idleDraw(){
   if(!mt.measuring&&viewOn("max")) traceMax.draw({t0:t});
 }
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
+addEventListener("keydown",e=>{                 // Esc är vägen ut ur helskärmen
+  if(e.code!=="Escape") return;
+  if(session.running) stopSession(false);
+  else if(session.finished) closeRun();
+});
 $("btnConnect").onclick=connect;
 $("btnTare").onclick=tare;
 listeners.push(kg=>{
