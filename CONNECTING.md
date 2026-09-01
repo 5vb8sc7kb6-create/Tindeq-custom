@@ -33,7 +33,9 @@ Knappnamnen nedan följer appens engelska gränssnitt (**Connect**, **Tare**, **
 
 **Knappen startar demoläget i stället.** Webbläsaren saknar Web Bluetooth, eller så visas sidan över en osäker anslutning. Använd Chrome eller Edge över https — på iPhone/iPad: Bluefy.
 
-**Ansluten, men siffran står stilla på 0.0.** Tryck **Tare** och dra igen. Hjälper inte det: ladda om sidan, väck dosan och anslut på nytt.
+**Ansluten, men siffran står stilla på 0.0.** Appen märker själv om strömmen aldrig kom igång: den skickar startkommandot på nytt några gånger, och lyckas det inte skriver statuspillret "no data, press Tare". Tryck då **Tare** — det nollar och startar om strömmen — och dra igen. Hjälper inte det: ladda om sidan, väck dosan och anslut på nytt.
+
+**Statuspillret säger "Connection failed" med ett felmeddelande efter.** Det är webbläsarens eget besked om vad som gick fel — oftast att dosan somnade mitt i kopplingen eller att den redan är upptagen av en annan app. Väck den och tryck Connect igen.
 
 **Kontakten bryts mitt i ett pass.** Appen avbryter då passet och maxtestet självt — inget halvfärdigt värde sparas. Väck dosan, tryck Connect och starta om passet. Bryts det ofta: kortare avstånd mellan dosa och skärm, och kolla batterisiffran i statuspillret — en fräsch cell ligger kring 3000 mV, och en bra bit därunder är batteriet första misstänkta.
 

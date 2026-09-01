@@ -432,7 +432,9 @@ const SVC="7e4e1701-1ea6-40c9-9dcc-13d34ffead57";
 const CDATA="7e4e1702-1ea6-40c9-9dcc-13d34ffead57";
 const CCTRL="7e4e1703-1ea6-40c9-9dcc-13d34ffead57";
 const CMD={TARE:0x64,START:0x65,STOP:0x66,BATTERY:0x6f};
-const bt={dev:null,ctrl:null,data:null,connected:false,streaming:false,lastKind:null,batt:null};
+const bt={dev:null,ctrl:null,data:null,connected:false,streaming:false,lastKind:null,batt:null,
+           lastSample:0,stalled:false,lowPower:false,watch:null,tries:0};
+const devName=()=>(bt.dev&&bt.dev.name)||"Progressor";
 let force=0, demoMode=false;
 const listeners=[];
 function onSample(kg){ force=kg; pushSample(kg); listeners.forEach(f=>f(kg)); }
@@ -441,37 +443,63 @@ const $=id=>document.getElementById(id);
 
 async function connect(){
   if(!navigator.bluetooth){ startDemo(); return; }
+  let dev;
+  /* Enhetsväljaren räknas för sig: avbryter man den är det inget fel att
+     rapportera. Allt därefter är riktiga fel och ska synas i statuspillret —
+     annars går "ansluten men tyst" inte att skilja från "ansluten". */
   try{
-    bt.dev=await navigator.bluetooth.requestDevice({
+    dev=await navigator.bluetooth.requestDevice({
       filters:[{services:[SVC]},{namePrefix:"Progressor"}], optionalServices:[SVC]});
-    bt.dev.addEventListener("gattserverdisconnected",onDisconnect);
-    const server=await bt.dev.gatt.connect();
+  }catch(err){ return; }
+  try{
+    bt.dev=dev;
+    dev.addEventListener("gattserverdisconnected",onDisconnect);
+    const server=await dev.gatt.connect();
     const svc=await server.getPrimaryService(SVC);
     bt.data=await svc.getCharacteristic(CDATA);
     bt.ctrl=await svc.getCharacteristic(CCTRL);
     await bt.data.startNotifications();
     bt.data.addEventListener("characteristicvaluechanged",handleNotify);
-    bt.connected=true;
-    setStatus(true,bt.dev.name||"Progressor");
-    await send(CMD.BATTERY,"battery"); await sleep(150);
-    await send(CMD.TARE); await sleep(150);
+    bt.connected=true; bt.streaming=false; bt.stalled=false; bt.lowPower=false; bt.lastSample=0;
+    setStatus(true,devName());
+    /* Dosan hinner inte lyssna direkt efter kopplingen — kommandon som skickas
+       medan länken sätter sig tappas tyst, och då blinkar den vidare utan att
+       strömma. Vänta in den först, och låt vakthunden i startStream ta resten.
+       Nollningen görs före starten, batteriet frågas sist så att svaret inte
+       kan fördröja strömmen. */
+    await sleep(400);
+    await send(CMD.TARE);
     await startStream();
+    await send(CMD.BATTERY,"battery");
   }catch(err){
-    if(err&&err.name==="NotFoundError") return;
-    setStatus(false,"Connection failed"); console.error(err);
+    console.error(err);
+    setStatus(false,"Connection failed — "+((err&&(err.message||err.name))||"unknown error"));
   }
 }
 function onDisconnect(){
-  bt.connected=false; bt.streaming=false; setStatus(false,"Disconnected");
+  bt.connected=false; bt.streaming=false; bt.stalled=false; bt.lowPower=false;
+  bt.ctrl=null; bt.data=null; clearWatch(); flushQueue();
+  setStatus(false,"Disconnected");
   if(session.running) stopSession(false);
   abortMax();
 }
 const q=[]; let busy=false;
-function send(op,tag){ return new Promise((res,rej)=>{ q.push({op,tag,res,rej}); pump(); }); }
+/* Utan dosa avvisas kommandot med en gång. Tidigare lades det i kön och blev
+   liggande — den som väntade på det väntade för alltid. */
+function send(op,tag){ return new Promise((res,rej)=>{
+  if(!bt.ctrl){ rej(new Error("no device")); return; }
+  q.push({op,tag,res,rej}); pump();
+}); }
+function flushQueue(){ while(q.length) q.shift().rej(new Error("disconnected")); busy=false; }
 async function pump(){
-  if(busy||!q.length||!bt.ctrl) return;
+  if(busy||!q.length) return;
   busy=true; const job=q.shift();
-  try{ bt.lastKind=job.tag||null; await bt.ctrl.writeValue(new Uint8Array([job.op])); job.res(); }
+  try{
+    if(!bt.ctrl) throw new Error("no device");
+    bt.lastKind=job.tag||null;
+    await bt.ctrl.writeValue(new Uint8Array([job.op]));
+    job.res();
+  }
   catch(e){ job.rej(e); }
   await sleep(120); busy=false; pump();
 }
@@ -479,18 +507,46 @@ function handleNotify(ev){
   const dv=ev.target.value; if(dv.byteLength<2) return;
   const kind=dv.getUint8(0), len=dv.getUint8(1);
   if(kind===0x01){
+    bt.lastSample=performance.now(); bt.tries=0;
+    if(bt.stalled){ bt.stalled=false; setStatus(true,devName()); }   // strömmen kom igång
     for(let o=2;o+8<=2+len&&o+8<=dv.byteLength;o+=8) onSample(dv.getFloat32(o,true));
   }else if(kind===0x00){
     if(bt.lastKind==="battery"&&len>=4){
       const raw=dv.getUint32(2,true);
       bt.batt=raw>10000?raw/1000:raw;
-      setStatus(true,(bt.dev&&bt.dev.name)||"Progressor");
+      setStatus(true,devName());
     }
     bt.lastKind=null;
+  }else if(kind===0x04){                                            // dosan varnar för lågt batteri
+    bt.lowPower=true; setStatus(true,devName());
   }
 }
-async function startStream(){ if(bt.connected&&!bt.streaming){ await send(CMD.START); bt.streaming=true; } }
-async function tare(){ if(bt.connected) await send(CMD.TARE); }
+/* Vakthund över strömmen. START kan tappas — medan länken sätter sig, eller om
+   dosan somnar om mitt i — och då står siffran still på 0.0 utan att något
+   säger ifrån. Kommer inget sampel på en dryg sekund skickas START om, och
+   efter några misslyckade försök skriver pillret ut att det är tyst. */
+function clearWatch(){ if(bt.watch){ clearInterval(bt.watch); bt.watch=null; } }
+function armWatch(){
+  clearWatch(); bt.tries=0;
+  bt.watch=setInterval(()=>{
+    if(!bt.connected||!bt.streaming){ clearWatch(); return; }
+    if(performance.now()-bt.lastSample<1500) return;
+    bt.tries++;
+    send(CMD.START).catch(()=>{});
+    if(bt.tries===3&&!bt.stalled){ bt.stalled=true; setStatus(true,devName()); }
+  },700);
+}
+async function startStream(force){
+  if(!bt.connected||(bt.streaming&&!force)) return;
+  bt.lastSample=performance.now();               // ge dosan en hel vakthundsrunda på sig
+  await send(CMD.START);
+  bt.streaming=true; armWatch();
+}
+async function tare(){
+  if(!bt.connected) return;
+  await send(CMD.TARE);
+  await startStream(bt.stalled);                 // Tare är också vägen tillbaka ur en tyst ström
+}
 
 let demoHold=false, demoVal=0;
 function startDemo(){
@@ -508,7 +564,10 @@ function startDemo(){
 }
 function setStatus(ok,text){
   $("dot").classList.toggle("on",!!ok);
-  let t=text; if(ok&&bt.batt) t+=" · "+bt.batt.toFixed(0)+" mV";
+  let t=text;
+  if(ok&&bt.batt) t+=" · "+bt.batt.toFixed(0)+" mV";
+  if(ok&&bt.lowPower) t+=" · low battery";
+  if(ok&&bt.stalled) t+=" · no data, press Tare";
   $("devtext").textContent=t;
   $("btnTare").disabled=!bt.connected;
 }
