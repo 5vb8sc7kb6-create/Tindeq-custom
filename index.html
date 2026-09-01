@@ -1,112 +1,184 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Abrahangs — Tindeq Progressor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --concrete:#DCDFD8; --concrete-2:#CDD2C9; --ink:#171A17; --ink-soft:#5A6159;
-  --ultra:#2438A8; --ultra-soft:#8B95CE; --rust:#A3341F; --lichen:#5F7F2E;
-  --hair:rgba(23,26,23,.18); --meter-h:min(44vh,340px);
+  /* cheerful palette */
+  --bg:#FFF7F0; --surface:#FFFFFF; --surface-2:#FFF0E3; --surface-3:#F3EEFF;
+  --ink:#241C33; --ink-soft:#6E6584;
+  --grape:#6C4DF6; --grape-2:#9B7CFF; --grape-soft:#CFC3FF;
+  --coral:#FF4E64; --mint:#0FBF8A; --sun:#FFC53D; --sky:#22B8F0;
+  --hair:rgba(36,28,51,.11);
+  --shadow:0 1px 2px rgba(36,28,51,.05),0 12px 30px -16px rgba(36,28,51,.35);
+  --shadow-lift:0 2px 4px rgba(36,28,51,.06),0 18px 40px -18px rgba(108,77,246,.55);
+  --r:16px; --r-sm:10px;
+  --meter-h:min(40vh,300px);
+  /* aliases for older rules */
+  --concrete:var(--bg); --concrete-2:var(--surface-2);
+  --ultra:var(--grape); --ultra-soft:var(--grape-soft); --rust:var(--coral); --lichen:var(--mint);
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
-body{background:var(--concrete);color:var(--ink);
-  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:16px;line-height:1.45;
+body{
+  color:var(--ink);
+  background:
+    radial-gradient(1100px 620px at 8% -10%, rgba(108,77,246,.16), transparent 62%),
+    radial-gradient(900px 520px at 98% -4%, rgba(255,197,61,.30), transparent 60%),
+    radial-gradient(820px 600px at 55% 112%, rgba(34,184,240,.16), transparent 62%),
+    var(--bg);
+  background-attachment:fixed;
+  font-family:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:16px;line-height:1.5;
   -webkit-font-smoothing:antialiased;
   padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
-.wrap{max-width:960px;margin:0 auto;padding:18px 18px 48px}
-.bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:18px}
-.mark{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:26px;letter-spacing:-.01em;margin-right:auto}
-.mark span{color:var(--ultra)}
-.dot{width:9px;height:9px;border-radius:50%;background:var(--ink-soft);display:inline-block;margin-right:7px}
-.dot.on{background:var(--lichen)}
-.status{font-size:13.5px;color:var(--ink-soft)}
+.wrap{max-width:960px;margin:0 auto;padding:20px 18px 56px}
+
+/* ---------- top bar ---------- */
+.bar{position:relative;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-bottom:14px;margin-bottom:20px}
+.bar::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;border-radius:99px;
+  background:linear-gradient(90deg,var(--grape),var(--sky),var(--mint),var(--sun),var(--coral))}
+.mark{font-family:"Outfit",sans-serif;font-weight:700;font-size:28px;letter-spacing:-.02em;margin-right:auto}
+.mark span{background:linear-gradient(100deg,var(--grape),var(--sky) 55%,var(--mint));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.status{display:inline-flex;align-items:center;font-size:13.5px;color:var(--ink-soft);
+  background:rgba(255,255,255,.72);border:1px solid var(--hair);border-radius:99px;padding:5px 12px 5px 10px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--ink-soft);opacity:.45;display:inline-block;margin-right:7px;flex:none}
+.dot.on{background:var(--mint);opacity:1;box-shadow:0 0 0 4px rgba(15,191,138,.20)}
+
+/* ---------- buttons ---------- */
 button{font:inherit;color:inherit;cursor:pointer}
-.btn{background:transparent;border:1.5px solid var(--ink);border-radius:2px;padding:7px 14px;font-size:14.5px;font-weight:500;transition:background .12s,color .12s}
-.btn:hover{background:var(--ink);color:var(--concrete)}
-.btn:focus-visible{outline:3px solid var(--ultra);outline-offset:2px}
-.btn.primary{background:var(--ultra);border-color:var(--ultra);color:#fff}
-.btn.primary:hover{background:#1a2a86;border-color:#1a2a86}
-.btn.ghost{border-color:var(--hair);color:var(--ink-soft)}
-.btn.ghost:hover{background:var(--concrete-2);color:var(--ink)}
-.btn[disabled]{opacity:.4;pointer-events:none}
-.btn.big{padding:13px 26px;font-size:17px}
-nav{display:flex;gap:2px;margin-bottom:22px}
-nav button{background:none;border:none;border-bottom:2px solid transparent;padding:8px 13px 7px;font-size:15px;color:var(--ink-soft)}
-nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ultra);font-weight:600}
-.view{display:none}.view.on{display:block}
-h2{font-family:"IBM Plex Sans Condensed",sans-serif;font-size:21px;margin:26px 0 4px;font-weight:600}
+.btn{background:var(--surface);border:1.5px solid var(--hair);border-radius:99px;padding:8px 16px;font-size:14.5px;font-weight:600;
+  box-shadow:0 1px 2px rgba(36,28,51,.05);
+  transition:transform .14s ease,box-shadow .14s ease,background .14s,color .14s,border-color .14s}
+.btn:hover{transform:translateY(-1px);border-color:var(--grape);color:var(--grape);box-shadow:var(--shadow)}
+.btn:active{transform:translateY(0)}
+.btn:focus-visible{outline:3px solid var(--grape-soft);outline-offset:2px}
+.btn.primary{background:linear-gradient(135deg,var(--grape),var(--grape-2));border-color:transparent;color:#fff;
+  box-shadow:0 8px 20px -10px rgba(108,77,246,.9)}
+.btn.primary:hover{color:#fff;border-color:transparent;box-shadow:0 14px 28px -12px rgba(108,77,246,1)}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--ink-soft);box-shadow:none}
+.btn.ghost:hover{background:rgba(255,255,255,.85);color:var(--grape)}
+.btn[disabled]{opacity:.38;pointer-events:none;box-shadow:none}
+.btn.big{padding:14px 28px;font-size:17px}
+
+/* ---------- tabs ---------- */
+nav{display:flex;gap:4px;margin-bottom:24px;padding:5px;width:fit-content;max-width:100%;
+  background:rgba(255,255,255,.7);border:1px solid var(--hair);border-radius:99px;box-shadow:var(--shadow)}
+nav button{background:none;border:none;border-radius:99px;padding:9px 16px;font-size:14.5px;font-weight:600;color:var(--ink-soft);white-space:nowrap;
+  transition:background .14s,color .14s}
+nav button:hover{color:var(--grape)}
+nav button[aria-selected="true"]{color:#fff;background:linear-gradient(135deg,var(--grape),var(--grape-2));
+  box-shadow:0 8px 18px -9px rgba(108,77,246,.95)}
+.view{display:none}.view.on{display:block;animation:rise .28s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+h2{font-family:"Outfit",sans-serif;font-size:22px;margin:30px 0 6px;font-weight:700;letter-spacing:-.01em}
 h2:first-child{margin-top:0}
 p.lede{color:var(--ink-soft);margin:0 0 16px;max-width:64ch;font-size:15px}
-.stage{display:grid;grid-template-columns:1fr 92px;gap:22px;align-items:end;border:1.5px solid var(--hair);background:var(--concrete-2);padding:20px;margin-bottom:16px}
-.readout{display:flex;flex-direction:column;justify-content:flex-end;height:var(--meter-h)}
-.phase{font-family:"IBM Plex Sans Condensed",sans-serif;font-size:16px;color:var(--ink-soft);margin-bottom:2px;min-height:1.3em}
-.clock{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:clamp(56px,16vw,100px);line-height:.86;font-variant-numeric:tabular-nums;margin-bottom:12px}
-.clock.work{color:var(--ultra)}.clock.rest{color:var(--ink-soft)}
-.force{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:clamp(38px,10vw,60px);line-height:1;font-variant-numeric:tabular-nums}
-.force small{font-size:.36em;font-weight:400;color:var(--ink-soft);margin-left:6px}
-.target-line{font-size:15px;color:var(--ink-soft);margin-top:6px}
-.target-line b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
-.meter{position:relative;height:var(--meter-h);border:1.5px solid var(--ink);background:var(--concrete);overflow:hidden}
-.fill{position:absolute;left:0;right:0;bottom:0;height:0;background:var(--ultra-soft);transition:height .05s linear}
-.fill.inzone{background:var(--ultra)}.fill.over{background:var(--rust)}
-.band{position:absolute;left:0;right:0;background:rgba(36,56,168,.16);border-top:1.5px dashed var(--ultra);border-bottom:1.5px dashed var(--ultra);display:none}
-.band.show{display:block}
-.peakline{position:absolute;left:0;right:0;height:0;border-top:1.5px solid var(--rust);display:none}
-.peakline.show{display:block}
-.reps{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 16px}
-.rep{width:24px;height:24px;border:1.5px solid var(--hair);display:grid;place-items:center;font-size:11px;color:var(--ink-soft)}
-.rep.done{background:var(--ultra);border-color:var(--ultra);color:#fff}
-.rep.now{border-color:var(--ink);border-width:2.5px;color:var(--ink);font-weight:700}
-.rep.L::after{content:"V"}.rep.R::after{content:"H"}
+
+/* ---------- meter card ---------- */
+.stage{display:grid;grid-template-columns:minmax(240px,36%) 1fr;gap:22px;align-items:stretch;
+  background:linear-gradient(160deg,var(--surface),var(--surface-3));
+  border:1px solid var(--hair);border-radius:var(--r);padding:22px;margin-bottom:18px;box-shadow:var(--shadow)}
+.readout{display:flex;flex-direction:column;justify-content:flex-end;min-height:var(--meter-h)}
+.phase{font-family:"Outfit",sans-serif;font-weight:600;font-size:15px;color:var(--grape);
+  align-self:flex-start;margin:0 auto auto 0;padding:6px 14px;border-radius:99px;
+  background:rgba(108,77,246,.10);border:1px solid var(--grape-soft)}
+.clock{font-family:"Outfit",sans-serif;font-weight:700;font-size:clamp(56px,16vw,100px);line-height:.86;font-variant-numeric:tabular-nums;margin-bottom:12px;letter-spacing:-.03em}
+.clock.work{color:var(--grape)}.clock.rest{color:var(--sky)}
+.force{font-family:"Outfit",sans-serif;font-weight:700;font-size:clamp(38px,10vw,60px);line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.force.inzone{color:var(--mint)}.force.over{color:var(--coral)}
+.force small{font-size:.36em;font-weight:500;color:var(--ink-soft);margin-left:6px}
+.target-line{font-size:15px;color:var(--ink-soft);margin-top:8px}
+.target-line b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+.chart{position:relative;height:var(--meter-h);border-radius:14px;overflow:hidden;border:1px solid var(--hair);
+  background:linear-gradient(180deg,rgba(108,77,246,.05),rgba(108,77,246,.11));
+  box-shadow:inset 0 1px 5px rgba(36,28,51,.07)}
+.chart canvas{display:block;width:100%;height:100%}
+
+/* ---------- rep chips ---------- */
+.reps{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 18px}
+.rep{width:26px;height:26px;border-radius:9px;border:1.5px solid var(--hair);background:var(--surface);
+  display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--ink-soft);transition:transform .15s,background .15s}
+.rep.done{background:linear-gradient(140deg,var(--grape-2),var(--grape));border-color:transparent;color:#fff;
+  box-shadow:0 6px 14px -8px rgba(108,77,246,.9)}
+.rep.now{border-color:var(--sun);border-width:3px;color:var(--ink);background:#FFF6DF;transform:scale(1.14);
+  box-shadow:0 0 0 4px rgba(255,197,61,.28);animation:beat 1.1s ease-in-out infinite}
+@keyframes beat{50%{box-shadow:0 0 0 9px rgba(255,197,61,.10)}}
+.rep.L::after{content:"L"}.rep.R::after{content:"R"}
+
+/* ---------- forms ---------- */
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px 18px;margin-bottom:18px}
-label{display:block;font-size:13.5px;color:var(--ink-soft);margin-bottom:4px}
-input[type=number],select{width:100%;font:inherit;font-variant-numeric:tabular-nums;padding:8px 9px;border:1.5px solid var(--hair);background:var(--concrete-2);border-radius:2px;color:var(--ink)}
-input:focus,select:focus{outline:2px solid var(--ultra);border-color:var(--ultra)}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
-table{width:100%;border-collapse:collapse;font-size:14.5px;font-variant-numeric:tabular-nums}
-th{text-align:left;font-weight:600;font-size:13px;color:var(--ink-soft);border-bottom:1.5px solid var(--ink);padding:6px 8px 6px 0}
-td{padding:7px 8px 7px 0;border-bottom:1px solid var(--hair)}
-td.g{font-variant-numeric:normal}
-.empty{color:var(--ink-soft);font-size:15px;padding:14px 0}
-.note{border-left:3px solid var(--ultra);padding:10px 0 10px 14px;margin:0 0 18px;font-size:14.5px;color:var(--ink-soft);max-width:66ch}
-.note b{color:var(--ink)}
-.note.warn{border-left-color:var(--rust)}
-.note.ok{border-left-color:var(--lichen)}
-.maxgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px}
-.maxcell{border:1.5px solid var(--hair);padding:11px 13px;background:var(--concrete-2)}
-.maxcell.derived{border-style:dashed}
-.maxcell .k{font-size:13px;color:var(--ink-soft)}
-.maxcell .v{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:28px;font-variant-numeric:tabular-nums}
-.maxcell .v.none{color:var(--ink-soft);font-weight:400;font-size:19px}
+label{display:block;font-size:13px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;letter-spacing:.01em}
+input[type=number],input[type=time],select{width:100%;font:inherit;font-weight:600;font-variant-numeric:tabular-nums;
+  padding:10px 11px;border:1.5px solid var(--hair);background:var(--surface);border-radius:var(--r-sm);color:var(--ink);
+  transition:border-color .14s,box-shadow .14s}
+input:hover,select:hover{border-color:var(--grape-soft)}
+input:focus,select:focus{outline:none;border-color:var(--grape);box-shadow:0 0 0 4px rgba(108,77,246,.16)}
+input[type=time]{padding-left:9px;padding-right:6px;min-width:0}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+
+/* ---------- tables ---------- */
+table{width:100%;border-collapse:collapse;font-size:14.5px;font-variant-numeric:tabular-nums;
+  background:var(--surface);border:1px solid var(--hair);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+th{text-align:left;font-weight:700;font-size:12.5px;letter-spacing:.03em;text-transform:uppercase;color:var(--grape);
+  background:rgba(108,77,246,.07);padding:10px 12px}
+td{padding:10px 12px;border-top:1px solid var(--hair)}
+tbody tr:hover{background:rgba(108,77,246,.045)}
+td.g{font-variant-numeric:normal;font-weight:600}
+.empty{color:var(--ink-soft);font-size:15px;padding:18px;background:var(--surface);border:1px dashed var(--hair);border-radius:var(--r)}
+
+/* ---------- notes ---------- */
+.note{border-left:4px solid var(--grape);border-radius:var(--r-sm);background:rgba(108,77,246,.07);
+  padding:12px 16px;margin:0 0 18px;font-size:14.5px;color:var(--ink-soft);max-width:66ch}
+.note b{color:var(--ink);font-weight:700}
+.note.warn{border-left-color:var(--coral);background:rgba(255,78,100,.08)}
+.note.ok{border-left-color:var(--mint);background:rgba(15,191,138,.10)}
+
+/* ---------- max values ---------- */
+.maxgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:22px}
+.maxcell{border:1px solid var(--hair);border-radius:var(--r);padding:14px 16px;background:var(--surface);
+  box-shadow:var(--shadow);transition:transform .16s,box-shadow .16s}
+.maxcell:hover{transform:translateY(-2px);box-shadow:var(--shadow-lift)}
+.maxcell.derived{border-style:dashed;background:linear-gradient(160deg,var(--surface),var(--surface-2))}
+.maxcell .k{font-size:12.5px;font-weight:600;color:var(--ink-soft)}
+.maxcell .v{font-family:"Outfit",sans-serif;font-weight:700;font-size:30px;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+  background:linear-gradient(120deg,var(--grape),var(--sky));-webkit-background-clip:text;background-clip:text;color:transparent}
+.maxcell .v.none{color:var(--ink-soft);background:none;-webkit-text-fill-color:currentColor;font-weight:500;font-size:19px}
 .maxcell .s{font-size:12.5px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
-/* schema */
-.week{display:grid;gap:0;border-top:1.5px solid var(--ink);margin-bottom:18px}
+
+/* ---------- week schedule ---------- */
+.week{display:grid;gap:6px;margin-bottom:20px}
 .day{display:grid;grid-template-columns:52px 1fr;gap:14px;align-items:start;
-  padding:12px 0;border-bottom:1px solid var(--hair)}
-.day.today{background:var(--concrete-2);box-shadow:-14px 0 0 var(--concrete-2),14px 0 0 var(--concrete-2)}
-.day .d{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:600;font-size:15px;padding-top:2px}
-.day.today .d{color:var(--ultra)}
-.slots{display:flex;flex-direction:column;gap:9px}
+  padding:14px;border:1px solid var(--hair);border-radius:var(--r);background:rgba(255,255,255,.66)}
+.day.today{background:linear-gradient(120deg,rgba(108,77,246,.13),rgba(34,184,240,.11) 60%,rgba(255,197,61,.16));
+  border-color:var(--grape-soft);box-shadow:var(--shadow)}
+.day.off{background:rgba(255,255,255,.4);border-style:dashed}
+.day .d{font-family:"Outfit",sans-serif;font-weight:700;font-size:15px;padding-top:2px;color:var(--ink-soft)}
+.day.today .d{color:var(--grape)}
+.slots{display:flex;flex-direction:column;gap:10px}
 .slot{display:grid;grid-template-columns:50px 1fr auto;gap:12px;align-items:center}
-.slot .t{font-size:13.5px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
-.slot .what{font-size:15px}
-.slot .what small{display:block;color:var(--ink-soft);font-size:13.5px}
-.day.off .what{color:var(--ink-soft)}
+.slot .t{font-size:13.5px;font-weight:700;color:var(--grape);font-variant-numeric:tabular-nums}
+.slot .what{font-size:15px;font-weight:600}
+.slot .what small{display:block;color:var(--ink-soft);font-size:13.5px;font-weight:400}
+.day.off .what,.day.off .slot .t{color:var(--ink-soft);font-weight:500}
+
 @media(max-width:560px){
-  .stage{grid-template-columns:1fr 66px;gap:14px;padding:14px}
-  .wrap{padding:14px 14px 40px}
-  nav{overflow-x:auto}
-  .day{grid-template-columns:40px 1fr;gap:10px}
-  .slot{grid-template-columns:46px 1fr;row-gap:6px}
+  .stage{grid-template-columns:1fr;gap:14px;padding:16px}
+  .readout{min-height:0}
+  .chart{height:min(34vh,230px)}
+  .wrap{padding:16px 14px 44px}
+  nav{overflow-x:auto;width:100%;flex-wrap:nowrap;border-radius:var(--r)}
+  .day{grid-template-columns:40px 1fr;gap:10px;padding:12px}
+  .slot{grid-template-columns:46px 1fr;row-gap:8px}
   .slot .btn{grid-column:2;justify-self:start}
 }
-@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
@@ -114,157 +186,153 @@ td.g{font-variant-numeric:normal}
 
 <div class="bar">
   <div class="mark">abra<span>hangs</span></div>
-  <div class="status"><span class="dot" id="dot"></span><span id="devtext">Ingen enhet</span></div>
-  <button class="btn" id="btnConnect">Anslut</button>
-  <button class="btn ghost" id="btnTare" disabled>Nolla</button>
+  <div class="status"><span class="dot" id="dot"></span><span id="devtext">No device</span></div>
+  <button class="btn" id="btnConnect">Connect</button>
+  <button class="btn ghost" id="btnTare" disabled>Tare</button>
 </div>
 
 <nav role="tablist">
-  <button role="tab" aria-selected="true" data-view="schema">Vecka</button>
-  <button role="tab" aria-selected="false" data-view="pass">Pass</button>
-  <button role="tab" aria-selected="false" data-view="max">Maxtest</button>
-  <button role="tab" aria-selected="false" data-view="logg">Logg</button>
-  <button role="tab" aria-selected="false" data-view="om">Underlag</button>
+  <button role="tab" aria-selected="true" data-view="schema">Week</button>
+  <button role="tab" aria-selected="false" data-view="pass">Session</button>
+  <button role="tab" aria-selected="false" data-view="max">Max test</button>
+  <button role="tab" aria-selected="false" data-view="logg">Log</button>
+  <button role="tab" aria-selected="false" data-view="om">Evidence</button>
 </nav>
 
-<!-- ============ VECKA ============ -->
+<!-- ============ WEEK ============ -->
 <section class="view on" id="v-schema">
   <div class="row">
-    <div style="flex:1;min-width:180px"><label for="fPhase">Fas</label>
+    <div style="flex:1;min-width:180px"><label for="fPhase">Phase</label>
       <select id="fPhase">
-        <option value="rehab">Återgång efter ringbandsskada</option>
-        <option value="full">Full träning</option>
+        <option value="rehab">Return from pulley injury</option>
+        <option value="full">Full training</option>
       </select></div>
-    <div style="flex:1;min-width:180px"><label for="fInjured">Skadad hand</label>
+    <div style="flex:1;min-width:180px"><label for="fInjured">Injured hand</label>
       <select id="fInjured">
-        <option value="">Ingen</option>
-        <option value="L">Vänster</option>
-        <option value="R">Höger</option>
+        <option value="">None</option>
+        <option value="L">Left</option>
+        <option value="R">Right</option>
       </select></div>
   </div>
   <div class="row">
-    <div style="flex:1;min-width:180px"><label for="fPerDay">Abrahangs per dag</label>
-      <select id="fPerDay"><option value="1">Ett pass</option><option value="2">Två pass</option></select></div>
-    <div style="width:120px"><label for="fAm">Morgon</label><input type="time" id="fAm" value="07:00"></div>
-    <div style="width:120px"><label for="fPm">Kväll</label><input type="time" id="fPm" value="19:00"></div>
+    <div style="flex:1;min-width:180px"><label for="fPerDay">Abrahangs per day</label>
+      <select id="fPerDay"><option value="1">One session</option><option value="2">Two sessions</option></select></div>
+    <div style="width:142px"><label for="fAm">Morning</label><input type="time" id="fAm" value="07:00"></div>
+    <div style="width:142px"><label for="fPm">Evening</label><input type="time" id="fPm" value="19:00"></div>
   </div>
 
   <div class="week" id="week"></div>
   <div class="note" id="phaseNote"></div>
 
-  <h2>Redo för tungt?</h2>
+  <h2>Ready for heavy loading?</h2>
   <div class="note" id="readiness"></div>
 </section>
 
-<!-- ============ PASS ============ -->
+<!-- ============ SESSION ============ -->
 <section class="view" id="v-pass">
   <div class="stage">
     <div class="readout">
-      <div class="phase" id="phase">Redo</div>
+      <div class="phase" id="phase">Ready</div>
       <div class="clock" id="clock">--</div>
       <div class="force" id="force">0.0<small>kg</small></div>
-      <div class="target-line" id="tline">Mål: <b>—</b></div>
+      <div class="target-line" id="tline">Target: <b>—</b></div>
     </div>
-    <div class="meter" id="meter">
-      <div class="band" id="band"></div>
-      <div class="fill" id="fill"></div>
-    </div>
+    <div class="chart"><canvas id="cvPass"></canvas></div>
   </div>
 
   <div class="reps" id="reps"></div>
 
   <div class="row">
-    <button class="btn primary big" id="btnStart">Starta pass</button>
-    <button class="btn big" id="btnStop" disabled>Avbryt</button>
-    <button class="btn ghost" id="btnSkip" disabled>Nästa</button>
+    <button class="btn primary big" id="btnStart">Start session</button>
+    <button class="btn big" id="btnStop" disabled>Stop</button>
+    <button class="btn ghost" id="btnSkip" disabled>Next</button>
   </div>
 
   <h2>Program</h2>
   <div class="grid">
-    <div><label for="fProg">Upplägg</label>
+    <div><label for="fProg">Protocol</label>
       <select id="fProg">
-        <option value="rehab">Abrahangs, återgång</option>
-        <option value="study">Abrahangs, studieversion</option>
-        <option value="emil">Abrahangs, Emils original</option>
+        <option value="rehab">Abrahangs, return to load</option>
+        <option value="study">Abrahangs, study version</option>
+        <option value="emil">Abrahangs, Emil's original</option>
         <option value="maxhang">Max hangs</option>
-        <option value="custom">Eget</option>
+        <option value="custom">Custom</option>
       </select></div>
-    <div><label for="fEdge">List</label>
+    <div><label for="fEdge">Edge</label>
       <select id="fEdge"><option value="20">20 mm</option><option value="10">10 mm</option></select></div>
-    <div><label for="fHands">Händer</label>
-      <select id="fHands"><option value="alt">Växelvis V/H</option><option value="L">Bara vänster</option><option value="R">Bara höger</option></select></div>
-    <div><label for="fPct">Intensitet (% av max)</label><input type="number" id="fPct" value="32" min="10" max="98"></div>
-    <div><label for="fWork">Håll (s)</label><input type="number" id="fWork" value="10" min="3" max="60"></div>
-    <div><label for="fRest">Vila mellan rep (s)</label><input type="number" id="fRest" value="20" min="5" max="300"></div>
-    <div><label for="fTol">Målzon ±%</label><input type="number" id="fTol" value="12" min="3" max="40"></div>
-    <div id="wrapReps" style="display:none"><label for="fReps">Rep per hand</label><input type="number" id="fReps" value="10" min="1" max="30"></div>
+    <div><label for="fHands">Hands</label>
+      <select id="fHands"><option value="alt">Alternating L/R</option><option value="L">Left only</option><option value="R">Right only</option></select></div>
+    <div><label for="fPct">Intensity (% of max)</label><input type="number" id="fPct" value="32" min="10" max="98"></div>
+    <div><label for="fWork">Hold (s)</label><input type="number" id="fWork" value="10" min="3" max="60"></div>
+    <div><label for="fRest">Rest between reps (s)</label><input type="number" id="fRest" value="20" min="5" max="300"></div>
+    <div><label for="fTol">Target zone ±%</label><input type="number" id="fTol" value="12" min="3" max="40"></div>
+    <div id="wrapReps" style="display:none"><label for="fReps">Reps per hand</label><input type="number" id="fReps" value="10" min="1" max="30"></div>
   </div>
   <div class="note" id="planInfo"></div>
   <div id="planTable"></div>
 </section>
 
-<!-- ============ MAXTEST ============ -->
+<!-- ============ MAX TEST ============ -->
 <section class="view" id="v-max">
-  <h2>Maxtest, en hand</h2>
-  <p class="lede">Sju sekunders håll i halvcrimp, som i studiens styrketest. Bygg upp kraften under första sekunden och håll den så jämnt du kan. Det som sparas är medelkraften från 1,5 sekunder och framåt — inte toppen, eftersom en topp du håller i en halv sekund inte säger något om vad du klarar i tio.</p>
+  <h2>Max test, one hand</h2>
+  <p class="lede">A seven-second hold in half crimp, the same as the study's strength test. Build the force during the first second and hold it as steadily as you can. What gets saved is the mean force from 1.5 seconds onwards — not the peak, since a peak you hold for half a second says nothing about what you can manage for ten.</p>
 
   <div class="stage">
     <div class="readout">
-      <div class="phase" id="mphase">Redo</div>
+      <div class="phase" id="mphase">Ready</div>
       <div class="clock" id="mclock">--</div>
       <div class="force" id="mforce">0.0<small>kg</small></div>
-      <div class="target-line">Snitt: <b id="mmean">—</b> · topp <span id="mpeak">—</span></div>
+      <div class="target-line">Mean: <b id="mmean">—</b> · peak <span id="mpeak">—</span></div>
     </div>
-    <div class="meter" id="mmeter">
-      <div class="peakline show" id="mpeakline"></div>
-      <div class="fill" id="mfill"></div>
-    </div>
+    <div class="chart"><canvas id="cvMax"></canvas></div>
   </div>
 
   <div class="row">
     <select id="mEdge" style="width:auto"><option value="20">20 mm</option><option value="10">10 mm</option></select>
-    <select id="mHand" style="width:auto"><option value="L">Vänster</option><option value="R">Höger</option></select>
-    <input type="number" id="mDur" value="7" min="5" max="12" style="width:74px" aria-label="Sekunder">
-    <input type="number" id="fBw" value="75" min="30" max="150" style="width:88px" aria-label="Kroppsvikt kg">
-    <button class="btn primary" id="btnMax">Starta test</button>
-    <button class="btn ghost" id="btnSaveMax" disabled>Spara som max</button>
+    <select id="mHand" style="width:auto"><option value="L">Left</option><option value="R">Right</option></select>
+    <input type="number" id="mDur" value="7" min="5" max="12" style="width:74px" aria-label="Seconds">
+    <input type="number" id="fBw" value="75" min="30" max="150" style="width:88px" aria-label="Body weight kg">
+    <button class="btn primary" id="btnMax">Start test</button>
+    <button class="btn ghost" id="btnSaveMax" disabled>Save as max</button>
   </div>
   <div class="note" id="maxNote"></div>
   <div class="maxgrid" id="maxgrid"></div>
 </section>
 
-<!-- ============ LOGG ============ -->
+<!-- ============ LOG ============ -->
 <section class="view" id="v-logg">
-  <h2>Logg</h2>
-  <p class="lede">Varje avslutat håll hamnar här. Ligger bara i minnet så länge fliken är öppen — ladda ner CSV om du vill spara den.</p>
+  <h2>Log</h2>
+  <p class="lede">Every completed hold ends up here, saved in this browser so it survives a reload. Download the CSV if you want it somewhere safer.</p>
   <div class="row">
-    <button class="btn" id="btnCsv">Ladda ner CSV</button>
-    <button class="btn ghost" id="btnClear">Rensa loggen</button>
+    <button class="btn" id="btnCsv">Download CSV</button>
+    <button class="btn ghost" id="btnClear">Clear log</button>
+    <button class="btn ghost" id="btnForget">Forget everything</button>
   </div>
-  <div id="logwrap"><div class="empty">Inget loggat än.</div></div>
+  <div class="note" id="storeNote"></div>
+  <div id="logwrap"><div class="empty">Nothing logged yet.</div></div>
 </section>
 
-<!-- ============ UNDERLAG ============ -->
+<!-- ============ EVIDENCE ============ -->
 <section class="view" id="v-om">
-  <h2>Vad studien faktiskt gjorde</h2>
-  <p class="lede">Gilmore, Klimek, Abrahamsson och Baar, Sports Medicine – Open 2024. Retrospektiv genomgång av 526 klättrare som loggat träning i Crimpd och gjort två styrketester inom fyra till sexton veckor.</p>
-  <p class="lede">Abrahangs: 18–22 mm list, fötterna i golvet, tio sekunders håll med tjugo sekunders vila, tjugo rep över sex grepp. Instruktionen var att bara känna en liten spänning i underarmen, beskrivet som ungefär fyrtio procent av max. Minst sex timmar mellan pass. Max hangs: 20 mm, sex rep om tio sekunder på 85–95 procent av 1RM, två minuters vila. Styrketestet definierade 1RM som den vikt man klarade att hålla i sju sekunder.</p>
+  <h2>What the study actually did</h2>
+  <p class="lede">Gilmore, Klimek, Abrahamsson and Baar, Sports Medicine – Open 2024. A retrospective review of 526 climbers who logged training in Crimpd and completed two strength tests within four to sixteen weeks.</p>
+  <p class="lede">Abrahangs: an 18–22 mm edge, feet on the floor, ten-second holds with twenty seconds of rest, twenty reps across six grips. The instruction was to feel only slight tension in the forearm, described as roughly forty percent of max. At least six hours between sessions. Max hangs: 20 mm, six reps of ten seconds at 85–95 percent of 1RM, two minutes of rest. The strength test defined 1RM as the weight you could hold for seven seconds.</p>
 
-  <h2>Resultatet</h2>
-  <p class="lede">Bara klättring gav ingen förändring. Abrahangs ensamt 2,5 procent i snitt, men inte statistiskt signifikant mot kontrollgruppen. Max hangs ensamt 3,2 procent, signifikant. Båda tillsammans 5,8 procent, signifikant bättre än vardera för sig. Effektstorlekar 0,29, 0,45 och 0,79.</p>
+  <h2>The results</h2>
+  <p class="lede">Climbing alone produced no change. Abrahangs alone gained 2.5 percent on average, but was not statistically significant against the control group. Max hangs alone gained 3.2 percent, significant. Both together gained 5.8 percent, significantly better than either on its own. Effect sizes 0.29, 0.45 and 0.79.</p>
 
-  <h2>Vad man inte vet</h2>
-  <p class="lede">Ingen randomisering, självvalda program, ingen kontroll av annan träning. Framför allt mättes aldrig belastningen i Abrahangs-gruppen — författarna skriver att de som fick effekt kan ha dragit hårdare än de andra. Det är luckan en Progressor täpper till.</p>
-  <p class="lede">Studien säger heller ingenting om skadade fingrar. Ingen av deltagarna följdes upp för skador, och rehabupplägget i den här appen bygger på allmänna principer för belastningsprogression, inte på data. Det ersätter inte en fysioterapeut som får titta på fingret.</p>
+  <h2>What we don't know</h2>
+  <p class="lede">No randomisation, self-selected programs, no control over other training. Above all, the load in the Abrahangs group was never measured — the authors write that those who saw an effect may simply have pulled harder than the rest. That is the gap a Progressor closes.</p>
+  <p class="lede">The study also says nothing about injured fingers. None of the participants were followed up for injuries, and the rehab protocol in this app is built on general principles of load progression, not on data. It is no substitute for a physiotherapist who gets to look at the finger.</p>
 
-  <h2>Om tio millimeter</h2>
-  <p class="lede">Varken studien eller Emils original gick under 18 mm för submaximalt arbete. Samma kraft på 10 mm ger högre tryck per area mot senskidorna. 20 mm är det som testats.</p>
+  <h2>About ten millimetres</h2>
+  <p class="lede">Neither the study nor Emil's original went below 18 mm for submaximal work. The same force on a 10 mm edge means higher pressure per unit area against the tendon sheaths. 20 mm is what has been tested.</p>
 
-  <h2>Så räknas målen</h2>
-  <p class="lede">Procenten utgår från din uppmätta hållkraft i halvcrimp på vald list. För grepp med färre fingrar sänks målet enligt Emils egna ansträngningsnivåer: tre fingrar drag på samma nivå som fyra, två fingrar öppet på runt sjuttio procent, tvåfingerscrimp på runt fyrtiofem. Faktorerna är en översättning, inte något som mätts.</p>
+  <h2>How the targets are calculated</h2>
+  <p class="lede">The percentage is based on your measured half-crimp hold strength on the selected edge. For grips with fewer fingers the target is lowered according to Emil's own effort levels: three-finger drag at the same level as four, front two open at around seventy percent, two-finger crimp at around forty-five. The factors are a translation, not something that has been measured.</p>
 
-  <h2>Teknik</h2>
-  <p class="lede">Web Bluetooth mot tjänst 7e4e1701-…, notifieringar på 1702, kommandon på 1703. Nolla 0x64, starta 0x65, stoppa 0x66. Kraft som little-endian float32 i kilo med tidsstämpel i mikrosekunder. Chrome och Edge på dator och Android; iOS kräver Bluefy.</p>
+  <h2>Technical notes</h2>
+  <p class="lede">Web Bluetooth against service 7e4e1701-…, notifications on 1702, commands on 1703. Tare 0x64, start 0x65, stop 0x66. Force as a little-endian float32 in kilos with a microsecond timestamp. Chrome and Edge on desktop and Android; iOS requires Bluefy.</p>
   <div class="note warn" id="btNote"></div>
 </section>
 
@@ -280,7 +348,7 @@ const CMD={TARE:0x64,START:0x65,STOP:0x66,BATTERY:0x6f};
 const bt={dev:null,ctrl:null,data:null,connected:false,streaming:false,lastKind:null,batt:null};
 let force=0, demoMode=false;
 const listeners=[];
-function onSample(kg){ force=kg; listeners.forEach(f=>f(kg)); }
+function onSample(kg){ force=kg; pushSample(kg); listeners.forEach(f=>f(kg)); }
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const $=id=>document.getElementById(id);
 
@@ -303,11 +371,11 @@ async function connect(){
     await startStream();
   }catch(err){
     if(err&&err.name==="NotFoundError") return;
-    setStatus(false,"Anslutning misslyckades"); console.error(err);
+    setStatus(false,"Connection failed"); console.error(err);
   }
 }
 function onDisconnect(){
-  bt.connected=false; bt.streaming=false; setStatus(false,"Frånkopplad");
+  bt.connected=false; bt.streaming=false; setStatus(false,"Disconnected");
   if(session.running) stopSession(false);
 }
 const q=[]; let busy=false;
@@ -339,7 +407,7 @@ async function tare(){ if(bt.connected) await send(CMD.TARE); }
 let demoHold=false, demoVal=0;
 function startDemo(){
   demoMode=true;
-  setStatus(true,"Demoläge — håll musknappen eller mellanslag");
+  setStatus(true,"Demo mode — hold the mouse button or spacebar");
   addEventListener("pointerdown",()=>demoHold=true);
   addEventListener("pointerup",()=>demoHold=false);
   addEventListener("keydown",e=>{ if(e.code==="Space"){demoHold=true;e.preventDefault();} });
@@ -357,7 +425,7 @@ function setStatus(ok,text){
   $("btnTare").disabled=!bt.connected;
 }
 
-/* ===================== Ljud ===================== */
+/* ===================== Sound ===================== */
 let ac=null;
 function beep(freq=880,ms=110,vol=.22){
   try{
@@ -371,30 +439,30 @@ function beep(freq=880,ms=110,vol=.22){
   }catch(e){}
 }
 
-/* ===================== Grepp, program, schema ===================== */
+/* ===================== Grips, programs, schedule ===================== */
 const GRIPS={
-  hc :{label:"Halvcrimp, fyra fingrar", mult:1.00},
-  d3 :{label:"Tre fingrar, drag",        mult:1.00},
-  f2o:{label:"Främre två, öppet",        mult:0.70},
-  m2o:{label:"Mellersta två, öppet",     mult:0.70},
-  f2c:{label:"Främre två, halvcrimp",    mult:0.45},
-  m2c:{label:"Mellersta två, halvcrimp", mult:0.45}
+  hc :{label:"Half crimp, four fingers", mult:1.00},
+  d3 :{label:"Three-finger drag",        mult:1.00},
+  f2o:{label:"Front two, open",          mult:0.70},
+  m2o:{label:"Middle two, open",         mult:0.70},
+  f2c:{label:"Front two, half crimp",    mult:0.45},
+  m2c:{label:"Middle two, half crimp",   mult:0.45}
 };
 const PRESETS={
   rehab:{pct:32,work:10,rest:20,blocks:[["hc",3],["d3",3]],
-    text:"Bara halvcrimp och tre fingrar drag. Tvåfingersgreppen är borttagna eftersom de koncentrerar belastningen på enskilda ringband. Lägre intensitet än studien, tolv rep, runt sex minuter."},
+    text:"Half crimp and three-finger drag only. The two-finger grips are removed because they concentrate the load on individual pulleys. Lower intensity than the study, twelve reps, around six minutes."},
   study:{pct:40,work:10,rest:20,blocks:[["hc",3],["d3",3],["f2o",1],["m2o",1],["f2c",1],["m2c",1]],
-    text:"Studiens greppsekvens, halverad per hand så att en växelvis runda landar på tjugo rep och runt tio minuter."},
+    text:"The study's grip sequence, halved per hand so that one alternating round lands on twenty reps and around ten minutes."},
   emil:{pct:40,work:10,rest:50,blocks:[["hc",3],["d3",3],["f2o",1],["m2o",1],["f2c",1],["m2c",1]],
-    text:"Emils originalvila på femtio sekunder. Passet blir runt tjugo minuter."},
+    text:"Emil's original fifty-second rest. The session runs around twenty minutes."},
   maxhang:{pct:85,work:10,rest:120,blocks:[["hc",6]],
-    text:"Sex rep om tio sekunder på 85–95 procent av uppmätt hållkraft, två minuters vila. Den här delen drev störst enskild effekt i studien."},
-  custom:{pct:40,work:10,rest:30,blocks:null,text:"Fritt upplägg med bara halvcrimp."}
+    text:"Six reps of ten seconds at 85–95 percent of measured hold strength, two minutes of rest. This part drove the largest single effect in the study."},
+  custom:{pct:40,work:10,rest:30,blocks:null,text:"Free protocol with half crimp only."}
 };
 const DAYS=[
-  {d:"Mån",type:"boulder"},{d:"Tis",type:"abra"},{d:"Ons",type:"boulder"},
-  {d:"Tor",type:"abra"},{d:"Fre",type:"abra"},
-  {d:"Lör",type:"abra",sub:"Hoppa över om du klättrar ute"},{d:"Sön",type:"rest"}
+  {d:"Mon",type:"boulder"},{d:"Tue",type:"abra"},{d:"Wed",type:"boulder"},
+  {d:"Thu",type:"abra"},{d:"Fri",type:"abra"},
+  {d:"Sat",type:"abra",sub:"Skip it if you climb outdoors"},{d:"Sun",type:"rest"}
 ];
 function hhmm(v){ const [h,m]=(v||"0:0").split(":").map(Number); return h+m/60; }
 function gapHours(){
@@ -404,15 +472,15 @@ function gapHours(){
 function buildDay(day){
   const twice=$("fPerDay").value==="2";
   const abra=phase()==="rehab"?"rehab":"study";
-  const abraName=phase()==="rehab"?"Abrahangs, återgång":"Abrahangs";
+  const abraName=phase()==="rehab"?"Abrahangs, return to load":"Abrahangs";
   const am=$("fAm").value, pm=$("fPm").value;
-  if(day.type==="rest") return [{time:"",what:"Vila",sub:"",prog:null}];
+  if(day.type==="rest") return [{time:"",what:"Rest",sub:"",prog:null}];
   if(day.type==="boulder"){
     const out=[];
-    if(twice) out.push({time:am,what:abraName,sub:"Före klättringen, inte efter",prog:abra});
+    if(twice) out.push({time:am,what:abraName,sub:"Before climbing, not after",prog:abra});
     out.push(phase()==="full"
-      ? {time:pm,what:"Max hangs, sedan bouldring",sub:"Efter uppvärmning, före de hårda försöken",prog:"maxhang"}
-      : {time:pm,what:"Bouldring",sub:"Ingen fingerträning före, ingen full crimp",prog:null});
+      ? {time:pm,what:"Max hangs, then bouldering",sub:"After warming up, before the hard attempts",prog:"maxhang"}
+      : {time:pm,what:"Bouldering",sub:"No fingerboarding beforehand, no full crimp",prog:null});
     return out;
   }
   const out=[];
@@ -421,8 +489,8 @@ function buildDay(day){
   return out;
 }
 const PHASE_NOTE={
-  rehab:"Tung fingerträning är borttagen ur veckan. Ringband fortsätter remodelleras i månader efter att smärtan försvunnit, och 85–95 procent av max är precis den belastning som gör återfall vanliga. Klättringen ligger kvar på måndag och onsdag så att fingrarna får två fria dagar mellan de hårda dagarna.",
-  full:"Tungt och klättring på samma dagar, Abrahangs däremellan. Minst sex timmar mellan två pass. Var fjärde vecka: hoppa max hangs helt och behåll Abrahangs."
+  rehab:"Heavy fingerboarding is removed from the week. Pulleys keep remodelling for months after the pain is gone, and 85–95 percent of max is precisely the load that makes re-injury common. Climbing stays on Monday and Wednesday so the fingers get two free days between the hard days.",
+  full:"Heavy work and climbing on the same days, Abrahangs in between. At least six hours between two sessions. Every fourth week: drop max hangs entirely and keep the Abrahangs."
 };
 
 function phase(){ return $("fPhase").value; }
@@ -430,7 +498,7 @@ function injured(){ return $("fInjured").value; }
 function preset(){ return PRESETS[$("fProg").value]; }
 
 function renderWeek(){
-  const today=(new Date().getDay()+6)%7;   // 0 = måndag
+  const today=(new Date().getDay()+6)%7;   // 0 = Monday
   const el=$("week"); el.innerHTML="";
   DAYS.forEach((day,i)=>{
     const slots=buildDay(day);
@@ -444,7 +512,7 @@ function renderWeek(){
       if(s.prog){
         const b=document.createElement("button");
         b.className="btn"+(i===today?" primary":" ghost");
-        b.textContent="Öppna";
+        b.textContent="Open";
         b.onclick=()=>{ $("fProg").value=s.prog; syncPreset(); showView("pass"); };
         sl.appendChild(b);
       }
@@ -461,10 +529,10 @@ function renderWeek(){
   if(twice){
     note+=" ";
     note+=g<6
-      ? `Just nu ligger passen ${g.toFixed(1)} timmar isär. Bindväven blir refraktär i ungefär sex timmar efter belastning, så det andra passet ger sannolikt inget extra stimulus — bara mer volym. Flytta isär dem.`
-      : `${g.toFixed(0)} timmar mellan passen, vilket räcker för att det andra ska räknas som ett nytt stimulus.`;
+      ? `Right now the sessions sit ${g.toFixed(1)} hours apart. Connective tissue stays refractory for roughly six hours after loading, so the second session likely adds no extra stimulus — only more volume. Move them further apart.`
+      : `${g.toFixed(0)} hours between the sessions, which is enough for the second one to count as a fresh stimulus.`;
     if(phase()==="rehab")
-      note+=" Med ett ringband på väg tillbaka: stanna på ett pass om dagen i två till tre veckor först, lägg sedan till det andra på en enda dag i veckan innan du gör det överallt.";
+      note+=" With a pulley on the mend: stay on one session a day for two to three weeks first, then add the second one on a single day of the week before doing it everywhere.";
   }
   $("phaseNote").textContent=note;
   renderReadiness();
@@ -475,37 +543,38 @@ function renderReadiness(){
   const inj=injured();
   if(!inj){
     box.className="note";
-    box.innerHTML="Ingen skadad hand vald. Välj den ovan om du kommer tillbaka från en skada, så anpassas maxtest och program.";
+    box.innerHTML="No injured hand selected. Pick one above if you are coming back from an injury, and the max test and program adapt to it.";
     return;
   }
   const healthy=inj==="L"?"R":"L";
   const a=maxes[20][inj], b=maxes[20][healthy];
   if(!b){
     box.className="note warn";
-    box.innerHTML=`Testa den <b>${healthy==="L"?"vänstra":"högra"}</b> handen först. Målen för den skadade sidan härleds från den siffran tills du kan testa båda.`;
+    box.innerHTML=`Test the <b>${healthy==="L"?"left":"right"}</b> hand first. Targets for the injured side are derived from that number until you can test both.`;
     return;
   }
   if(!a){
     box.className="note warn";
-    box.innerHTML="Maxtesta inte den skadade handen än — ett maximalt drag är i sig belastningen du försöker undvika. Kör återgångsprogrammet några veckor först, och testa när tio sekunders håll på 32 procent känns odramatiskt och du inte är öm dagen efter.";
+    box.innerHTML="Don't max test the injured hand yet — a maximal pull is itself the load you are trying to avoid. Run the return-to-load program for a few weeks first, and test once a ten-second hold at 32 percent feels unremarkable and you are not sore the next day.";
     return;
   }
   const diff=(b-a)/b*100;
   if(diff<=10){
     box.className="note ok";
-    box.innerHTML=`Skillnad mellan händerna: <b>${diff.toFixed(0)} procent</b>. Under tio är en rimlig tumregel för att börja bygga upp tungt igen — men gör det gradvis, 60 sedan 70 sedan 80 procent över några veckor, inte direkt på 85. Byt fas här ovanför när du bestämt dig, gärna efter att en fysio sett fingret.`;
+    box.innerHTML=`Difference between hands: <b>${diff.toFixed(0)} percent</b>. Under ten is a reasonable rule of thumb for starting to build back up to heavy work — but do it gradually, 60 then 70 then 80 percent over a few weeks, not straight onto 85. Switch phase above once you have decided, ideally after a physio has looked at the finger.`;
   }else{
     box.className="note warn";
-    box.innerHTML=`Skillnad mellan händerna: <b>${diff.toFixed(0)} procent</b>. Över tio talar för att fortsätta på återgångsprogrammet. Tumregeln är grov och ersätter inte en bedömning av fingret.`;
+    box.innerHTML=`Difference between hands: <b>${diff.toFixed(0)} percent</b>. Over ten argues for staying on the return-to-load program. The rule of thumb is crude and is no substitute for having the finger assessed.`;
   }
 }
 function showView(v){
   document.querySelectorAll("nav button").forEach(x=>x.setAttribute("aria-selected",x.dataset.view===v));
   document.querySelectorAll(".view").forEach(s=>s.classList.remove("on"));
   $("v-"+v).classList.add("on");
+  requestAnimationFrame(()=>{ tracePass.fit(); traceMax.fit(); if(!session.running&&!mt.measuring) idleDraw(); });
 }
 
-/* ===================== Planbygge ===================== */
+/* ===================== Plan building ===================== */
 function refMax(edge,hand){
   const m=maxes[edge][hand];
   if(m) return {v:m,derived:false};
@@ -548,12 +617,12 @@ function renderPlanInfo(){
   const miss=need.filter(h=>!refMax(edge,h));
   if(miss.length){
     box.className="note warn";
-    box.innerHTML=`Saknar referensvärde för <b>${miss.map(h=>h==="L"?"vänster":"höger").join(" och ")}</b> på ${edge} mm. Kör ett maxtest först — utan mätt kraft blir procenten en gissning, och det var studiens största svaghet.`;
+    box.innerHTML=`No reference value for <b>${miss.map(h=>h==="L"?"left":"right").join(" and ")}</b> on the ${edge} mm edge. Run a max test first — without measured force the percentage is a guess, and that was the study's biggest weakness.`;
     return;
   }
   if(phase()==="rehab"&&$("fProg").value==="maxhang"){
     box.className="note warn";
-    box.innerHTML="Max hangs ligger utanför återgångsfasen. Vill du ändå köra: sänk intensiteten rejält och betrakta det som ett test, inte som träning.";
+    box.innerHTML="Max hangs sit outside the return-to-load phase. If you want to run them anyway: drop the intensity substantially and treat it as a test, not as training.";
     return;
   }
   const plan=buildPlan();
@@ -562,9 +631,9 @@ function renderPlanInfo(){
   const total=plan.reduce((a,r)=>a+r.work+r.rest,0);
   box.className="note";
   box.innerHTML=preset().text+
-    (edge==="10"?"<br><br><b>10 mm ligger utanför underlaget</b> — varken studien eller Emils original gick under 18 mm för submaximalt arbete.":"")+
-    (derived?"<br><br>Målet för den skadade handen är härlett från den friska. Det underskattar troligen kapaciteten något, vilket är rätt håll att fela åt.":"")+
-    `<br><br>${plan.length} rep · ${work} sekunder under belastning · ${Math.round(total/60)} minuter totalt.`;
+    (edge==="10"?"<br><br><b>10 mm sits outside the evidence</b> — neither the study nor Emil's original went below 18 mm for submaximal work.":"")+
+    (derived?"<br><br>The target for the injured hand is derived from the healthy one. That probably underestimates its capacity slightly, which is the right direction to err in.":"")+
+    `<br><br>${plan.length} reps · ${work} seconds under load · ${Math.round(total/60)} minutes in total.`;
 }
 function renderPlanTable(){
   const p=preset(), edge=$("fEdge").value, pct=+$("fPct").value;
@@ -576,8 +645,8 @@ function renderPlanTable(){
     return `<tr><td class="g">${GRIPS[g].label}</td><td>${n} × ${hl.length}</td>
       <td>${Math.round(pct*GRIPS[g].mult)} %</td><td>${t} kg</td></tr>`;
   }).join("");
-  $("planTable").innerHTML=`<table><thead><tr><th>Grepp</th><th>Rep</th><th>Andel av max</th>
-    <th>Mål ${hl.length>1?"V / H":""}</th></tr></thead><tbody>${rows}</tbody></table>`;
+  $("planTable").innerHTML=`<table><thead><tr><th>Grip</th><th>Reps</th><th>Share of max</th>
+    <th>Target ${hl.length>1?"L / R":""}</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 $("fProg").addEventListener("change",syncPreset);
 ["fEdge","fHands","fPct","fWork","fRest","fTol","fReps"].forEach(id=>$(id).addEventListener("input",refresh));
@@ -587,7 +656,7 @@ $("fPhase").addEventListener("change",()=>{
 $("fInjured").addEventListener("change",()=>{ renderWeek(); renderMax(); });
 ["fPerDay","fAm","fPm"].forEach(id=>$(id).addEventListener("input",renderWeek));
 
-/* ===================== Maxtest ===================== */
+/* ===================== Max test ===================== */
 const maxes={10:{L:null,R:null},20:{L:null,R:null}};
 function renderMax(){
   const g=$("maxgrid"); g.innerHTML="";
@@ -597,40 +666,36 @@ function renderMax(){
     const own=maxes[edge][h];
     const d=document.createElement("div");
     d.className="maxcell"+(r&&r.derived?" derived":"");
-    const val=own?own.toFixed(1)+" kg":(r&&r.derived?r.v.toFixed(1)+" kg":"inte testad");
-    d.innerHTML=`<div class="k">${edge} mm · ${h==="L"?"vänster":"höger"}${h===injured()?" · skadad":""}</div>
+    const val=own?own.toFixed(1)+" kg":(r&&r.derived?r.v.toFixed(1)+" kg":"not tested");
+    d.innerHTML=`<div class="k">${edge} mm · ${h==="L"?"left":"right"}${h===injured()?" · injured":""}</div>
       <div class="v ${own?"":"none"}">${val}</div>
-      <div class="s">${own&&bw?Math.round(own/bw*100)+" % av kroppsvikten":(r&&r.derived?"härlett från frisk hand":"")}</div>`;
+      <div class="s">${own&&bw?Math.round(own/bw*100)+" % of body weight":(r&&r.derived?"derived from healthy hand":"")}</div>`;
     g.appendChild(d);
   }
   const inj=injured();
   const note=$("maxNote");
   if(inj&&!maxes[20][inj]){
     note.className="note warn";
-    note.innerHTML=`Maxtesta inte <b>${inj==="L"?"vänster":"höger"}</b> hand än. Testa den friska sidan, så används den siffran som referens för båda.`;
+    note.innerHTML=`Don't max test the <b>${inj==="L"?"left":"right"}</b> hand yet. Test the healthy side, and that number is used as the reference for both.`;
   }else{
     note.className="note";
-    note.innerHTML="Grovt riktmärke för enhands halvcrimp på 20 mm: runt 50 procent av kroppsvikten är hyfsat, 60 och uppåt starkt. Spridningen är stor — kurvan över månader säger mer än en enskild siffra.";
+    note.innerHTML="A rough benchmark for a one-hand half crimp on 20 mm: around 50 percent of body weight is decent, 60 and up is strong. The spread is wide — the curve over months says more than any single number.";
   }
   refresh(); renderReadiness();
 }
-function paint(fillEl,kg,scale,cls){
-  fillEl.style.height=(Math.max(0,Math.min(1,kg/scale))*100)+"%";
-  fillEl.className="fill"+(cls?" "+cls:"");
-}
-const mt={running:false,peak:0,t0:0,dur:7,raf:0,samples:[],mean:0};
+const mt={running:false,measuring:false,peak:0,t0:0,dur:7,raf:0,samples:[],mean:0};
 $("btnMax").onclick=()=>{
   if(mt.running) return;
   if(!bt.connected&&!demoMode){ connect(); return; }
   const inj=injured(), h=$("mHand").value;
-  if(inj&&h===inj&&!maxes[20][inj]&&!confirm("Du har markerat den här handen som skadad. Ett maximalt håll är den belastning du försöker undvika. Vill du testa ändå?")) return;
-  mt.dur=+$("mDur").value||7; mt.peak=0; mt.samples=[]; mt.mean=0; mt.running=true;
+  if(inj&&h===inj&&!maxes[20][inj]&&!confirm("You have marked this hand as injured. A maximal hold is exactly the load you are trying to avoid. Do you want to test anyway?")) return;
+  mt.dur=+$("mDur").value||7; mt.peak=0; mt.samples=[]; mt.mean=0; mt.running=true; mt.measuring=false;
   $("btnSaveMax").disabled=true;
-  let n=3; $("mphase").textContent="Gör dig redo";
+  let n=3; $("mphase").textContent="Get ready";
   const cd=setInterval(()=>{
     $("mclock").textContent=n; beep(660,90);
-    if(n--===0){ clearInterval(cd); beep(1100,260); mt.t0=performance.now();
-      $("mphase").textContent="Bygg upp och håll"; loopMax(); }
+    if(n--===0){ clearInterval(cd); beep(1100,260); mt.t0=performance.now(); mt.measuring=true;
+      $("mphase").textContent="Build up and hold"; loopMax(); }
   },1000);
 };
 function loopMax(){
@@ -639,16 +704,15 @@ function loopMax(){
   $("mclock").textContent=left.toFixed(1);
   if(force>mt.peak) mt.peak=force;
   if(el>=1.5) mt.samples.push(force);
-  const scale=Math.max(10,mt.peak*1.2,force*1.2);
-  paint($("mfill"),force,scale,el>=1.5?"inzone":"");
-  $("mpeakline").style.bottom=Math.min(99,(mt.peak/scale)*100)+"%";
   $("mforce").innerHTML=force.toFixed(1)+"<small>kg</small>";
+  traceMax.draw({t0:mt.t0/1000,span:mt.dur,deadUntil:1.5,
+    lines:[{kg:mt.peak,color:"coral",label:"peak"},{kg:mt.mean,color:"mint",label:"mean"}]});
   mt.mean=mt.samples.length?mt.samples.reduce((a,b)=>a+b,0)/mt.samples.length:0;
   $("mmean").textContent=mt.mean?mt.mean.toFixed(1)+" kg":"—";
   $("mpeak").textContent=mt.peak.toFixed(1)+" kg";
   if(left>0){ mt.raf=requestAnimationFrame(loopMax); }
-  else{ mt.running=false; beep(440,300);
-    $("mphase").textContent="Klart"; $("mclock").textContent="--";
+  else{ mt.running=false; mt.measuring=false; beep(440,300);
+    $("mphase").textContent="Done"; $("mclock").textContent="--";
     $("btnSaveMax").disabled=mt.mean<=0; }
 }
 $("btnSaveMax").onclick=()=>{
@@ -656,11 +720,11 @@ $("btnSaveMax").onclick=()=>{
   maxes[e][h]=mt.mean;
   log.push({tid:new Date().toISOString(),typ:"maxtest",grepp:"hc",list:e,hand:h,
     mal:"",topp:mt.peak,snitt:mt.mean,izon:"",sek:mt.dur});
-  renderMax(); renderLog(); $("btnSaveMax").disabled=true;
+  renderMax(); renderLog(); saveStore(); $("btnSaveMax").disabled=true;
 };
 $("fBw").addEventListener("input",renderMax);
 
-/* ===================== Passet ===================== */
+/* ===================== The session ===================== */
 const session={running:false,plan:[],i:0,phase:"idle",t0:0,dur:0,raf:0,
   samples:[],inZone:0,total:0,peak:0};
 function renderReps(){
@@ -705,37 +769,39 @@ function loopSession(){
   const left=Math.max(0,session.dur-(performance.now()-session.t0)/1000);
   const clock=$("clock"), phaseEl=$("phase");
   const tol=(+$("fTol").value)/100;
-  const scale=rep&&rep.target?Math.max(rep.target*2.2,force*1.15,6):Math.max(force*1.2,10);
+  let lo=null,hi=null;
   if(rep&&rep.target){
-    const lo=rep.target*(1-tol), hi=rep.target*(1+tol);
-    const band=$("band"); band.classList.add("show");
-    band.style.bottom=(lo/scale*100)+"%";
-    band.style.height=((hi-lo)/scale*100)+"%";
-    $("tline").innerHTML=`Mål: <b>${rep.target.toFixed(1)} kg</b> · ${lo.toFixed(1)}–${hi.toFixed(1)} · ${rep.edge} mm`;
+    lo=rep.target*(1-tol); hi=rep.target*(1+tol);
+    $("tline").innerHTML=`Target: <b>${rep.target.toFixed(1)} kg</b> · ${lo.toFixed(1)}–${hi.toFixed(1)} · ${rep.edge} mm`;
   }
   let cls="";
   if(session.phase==="work"&&rep){
-    const lo=rep.target*(1-tol), hi=rep.target*(1+tol);
     cls=force>hi?"over":(force>=lo?"inzone":"");
     session.total++;
     if(force>=lo&&force<=hi) session.inZone++;
     if(force>session.peak) session.peak=force;
     session.samples.push(force);
   }
-  paint($("fill"),force,scale,cls);
   $("force").innerHTML=force.toFixed(1)+"<small>kg</small>";
-  const hand=rep?(rep.hand==="L"?"vänster":"höger"):"";
+  $("force").className="force"+(cls?" "+cls:"");
+  const nowS=performance.now()/1000, holding=session.phase==="work";
+  tracePass.draw({
+    t0:holding?session.t0/1000:nowS-IDLE_SPAN,
+    span:holding?session.dur:IDLE_SPAN,
+    lo,hi,target:rep?rep.target:null
+  });
+  const hand=rep?(rep.hand==="L"?"left":"right"):"";
   if(session.phase==="prep"){
     phaseEl.textContent=GRIPS[rep.grip].label+" · "+hand;
     clock.textContent=Math.ceil(left); clock.className="clock";
     if(left<=0){ beep(1100,260); enterPhase("work",rep.work); } else tickBeep(left);
   }else if(session.phase==="work"){
-    phaseEl.textContent="Håll · "+GRIPS[rep.grip].label+" · "+hand;
+    phaseEl.textContent="Hold · "+GRIPS[rep.grip].label+" · "+hand;
     clock.textContent=left.toFixed(1); clock.className="clock work";
     if(left<=0) finishRep();
   }else if(session.phase==="rest"){
     const n=session.plan[session.i];
-    phaseEl.textContent=n?"Vila · nästa "+GRIPS[n.grip].label+", "+(n.hand==="L"?"vänster":"höger"):"Vila";
+    phaseEl.textContent=n?"Rest · next "+GRIPS[n.grip].label+", "+(n.hand==="L"?"left":"right"):"Rest";
     clock.textContent=Math.ceil(left); clock.className="clock rest";
     if(left<=0){ beep(1100,200); enterPhase("prep",3); renderReps(); } else tickBeep(left);
   }
@@ -753,7 +819,7 @@ function finishRep(){
   const zone=session.total?session.inZone/session.total*100:0;
   log.push({tid:new Date().toISOString(),typ:$("fProg").value,grepp:rep.grip,list:rep.edge,
     hand:rep.hand,mal:rep.target,topp:session.peak,snitt:avg,izon:zone,sek:rep.work});
-  renderLog(); nextRep();
+  renderLog(); saveStore(); nextRep();
 }
 function nextRep(){
   const rep=currentRep(); session.i++;
@@ -763,56 +829,251 @@ function nextRep(){
 function stopSession(done){
   session.running=false; cancelAnimationFrame(session.raf);
   $("btnStart").disabled=false; $("btnStop").disabled=true; $("btnSkip").disabled=true;
-  $("phase").textContent=done?"Passet klart":"Avbrutet";
+  $("phase").textContent=done?"Session complete":"Stopped";
   $("clock").textContent="--"; $("clock").className="clock";
-  $("band").classList.remove("show");
+  $("force").className="force";
   keepAwake(false); renderReps();
   if(done){ beep(880,160); setTimeout(()=>beep(1180,320),180); }
 }
 
-/* ===================== Logg ===================== */
+/* ===================== Log ===================== */
 const log=[];
 function renderLog(){
   const w=$("logwrap");
-  if(!log.length){ w.innerHTML='<div class="empty">Inget loggat än.</div>'; return; }
+  if(!log.length){ w.innerHTML='<div class="empty">Nothing logged yet.</div>'; return; }
   const rows=log.slice().reverse().map(r=>`<tr>
-    <td>${new Date(r.tid).toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"})}</td>
-    <td class="g">${r.typ==="maxtest"?"Maxtest":GRIPS[r.grepp].label}</td>
-    <td>${r.list} mm</td><td>${r.hand==="L"?"V":"H"}</td>
+    <td>${new Date(r.tid).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}</td>
+    <td class="g">${r.typ==="maxtest"?"Max test":GRIPS[r.grepp].label}</td>
+    <td>${r.list} mm</td><td>${r.hand==="L"?"L":"R"}</td>
     <td>${r.mal?(+r.mal).toFixed(1):"—"}</td>
     <td>${(+r.topp).toFixed(1)}</td>
     <td>${r.snitt!==""?(+r.snitt).toFixed(1):"—"}</td>
     <td>${r.izon!==""?Math.round(r.izon)+" %":"—"}</td></tr>`).join("");
-  w.innerHTML=`<table><thead><tr><th>Tid</th><th>Grepp</th><th>List</th><th>Hand</th>
-    <th>Mål</th><th>Topp</th><th>Snitt</th><th>I zon</th></tr></thead><tbody>${rows}</tbody></table>`;
+  w.innerHTML=`<table><thead><tr><th>Time</th><th>Grip</th><th>Edge</th><th>Hand</th>
+    <th>Target</th><th>Peak</th><th>Mean</th><th>In zone</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 $("btnCsv").onclick=()=>{
-  const head="tid,program,grepp,list_mm,hand,mal_kg,topp_kg,snitt_kg,i_zon_pct,sekunder\n";
+  const head="time,program,grip,edge_mm,hand,target_kg,peak_kg,mean_kg,in_zone_pct,seconds\n";
   const body=log.map(r=>[r.tid,r.typ,r.grepp,r.list,r.hand,r.mal,r.topp,r.snitt,r.izon,r.sek].join(",")).join("\n");
   const url=URL.createObjectURL(new Blob([head+body],{type:"text/csv"}));
   const a=document.createElement("a");
-  a.href=url; a.download="fingertraning-"+new Date().toISOString().slice(0,10)+".csv";
+  a.href=url; a.download="fingerboard-"+new Date().toISOString().slice(0,10)+".csv";
   a.click(); URL.revokeObjectURL(url);
 };
-$("btnClear").onclick=()=>{ log.length=0; renderLog(); };
+$("btnClear").onclick=()=>{ log.length=0; renderLog(); saveStore(); };
+$("btnForget").onclick=forgetAll;
+
+/* ===================== Force chart ===================== */
+/* En rullande kurva över kraft mot tid. Under ett håll spänner x-axeln
+   över hela hålltiden, så man ser om nivån höll hela vägen. Däremellan
+   rullar den de senaste sekunderna förbi. */
+const IDLE_SPAN=12;
+const SMOOTH=0.14;      // sekunder. Bara hur kurvan ritas — siffror, snitt,
+                        // topp och tid i zon räknas alltid på råa sampel.
+const feed=[];                                  // {t,kg}, råsignalen
+function pushSample(kg){
+  const t=performance.now()/1000;
+  feed.push({t,kg});
+  let i=0, cut=t-90;
+  while(i<feed.length&&feed[i].t<cut) i++;
+  if(i) feed.splice(0,i);
+}
+const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function rgba(hex,a){
+  const h=(hex||"").replace("#","");
+  if(h.length<3) return `rgba(110,101,132,${a})`;
+  const n=parseInt(h.length===3?h.split("").map(c=>c+c).join(""):h.slice(0,6),16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+}
+function makeChart(cv){
+  const c=cv.getContext("2d");
+  let W=1,H=1,scale=10;
+  const col={};
+  function readColors(){
+    col.grape=cssv("--grape")||"#6C4DF6"; col.mint=cssv("--mint")||"#0FBF8A";
+    col.coral=cssv("--coral")||"#FF4E64"; col.soft=cssv("--ink-soft")||"#6E6584";
+  }
+  function fit(){
+    const r=cv.getBoundingClientRect(), d=Math.min(2,window.devicePixelRatio||1);
+    W=Math.max(1,r.width); H=Math.max(1,r.height);
+    cv.width=Math.round(W*d); cv.height=Math.round(H*d);
+    c.setTransform(d,0,0,d,0,0);
+  }
+  readColors(); fit();
+  addEventListener("resize",fit);
+
+  function draw(o){
+    o=o||{};
+    const t0=o.t0!=null?o.t0:performance.now()/1000-IDLE_SPAN;
+    const span=o.span>0?o.span:IDLE_SPAN, t1=t0+span;
+    const X=t=>((t-t0)/span)*W, Y=kg=>H-(Math.max(0,Math.min(kg,scale))/scale)*H;
+
+    let top=6;
+    for(const p of feed) if(p.t>=t0&&p.kg>top) top=p.kg;
+    if(o.hi) top=Math.max(top,o.hi*1.15);
+    if(o.target) top=Math.max(top,o.target*1.5);
+    for(const l of (o.lines||[])) if(l&&l.kg) top=Math.max(top,l.kg*1.12);
+    scale+=(top*1.12-scale)*0.10;
+    if(!isFinite(scale)||scale<1) scale=10;
+
+    c.clearRect(0,0,W,H);
+    c.save(); c.beginPath(); c.rect(0,0,W,H); c.clip();
+    c.font="600 11px 'Plus Jakarta Sans',system-ui,sans-serif";
+
+    // sekundrutnät
+    const step=span<=15?1:5;                       // linjerna räknas från t0, så en ruta = en sekund av hållet
+    c.strokeStyle=rgba(col.soft,.14); c.lineWidth=1;
+    for(let k=step;k<span;k+=step){
+      const x=Math.round(X(t0+k))+.5;
+      c.beginPath(); c.moveTo(x,0); c.lineTo(x,H); c.stroke();
+    }
+    // uppbyggnaden som inte räknas (maxtestet)
+    if(o.deadUntil){
+      const x=Math.round(X(t0+o.deadUntil))+.5;
+      c.fillStyle=rgba(col.soft,.10); c.fillRect(0,0,x,H);
+      c.strokeStyle=rgba(col.soft,.55); c.setLineDash([4,4]); c.lineWidth=1.5;
+      c.beginPath(); c.moveTo(x,0); c.lineTo(x,H); c.stroke(); c.setLineDash([]);
+    }
+    // målzon
+    if(o.lo!=null&&o.hi!=null){
+      c.fillStyle=rgba(col.mint,.17); c.fillRect(0,Y(o.hi),W,Y(o.lo)-Y(o.hi));
+      c.strokeStyle=rgba(col.mint,.85); c.lineWidth=1.5; c.setLineDash([6,5]);
+      for(const v of [o.lo,o.hi]){
+        const y=Math.round(Y(v))+.5;
+        c.beginPath(); c.moveTo(0,y); c.lineTo(W,y); c.stroke();
+      }
+      c.setLineDash([]);
+    }
+    // extra vågräta linjer, t.ex. topp och snitt
+    let lastLabelY=-99;
+    for(const l of (o.lines||[])){
+      if(!l||!l.kg) continue;
+      const y=Math.round(Y(l.kg))+.5, cc=col[l.color]||col.soft;
+      c.strokeStyle=rgba(cc,.75); c.lineWidth=1.5; c.setLineDash([3,4]);
+      c.beginPath(); c.moveTo(0,y); c.lineTo(W,y); c.stroke(); c.setLineDash([]);
+      if(l.label){
+        let ly=Math.max(12,y-6);
+        if(Math.abs(ly-lastLabelY)<13) ly=y+14;      // krockar med föregående etikett
+        lastLabelY=ly;
+        c.fillStyle=rgba(cc,.95); c.fillText(l.label,7,Math.min(H-4,ly));
+      }
+    }
+    // kurvan: centrerat glidande medel, ritad genom mjuka kurvsegment
+    const vis=[];
+    for(const p of feed) if(p.t>=t0-span*0.04&&p.t<=t1) vis.push(p);
+    if(vis.length>1){
+      const zone=kg=>o.lo==null?0:(kg>o.hi?2:(kg>=o.lo?1:0));
+      const hue=z=>z===2?col.coral:(z===1?col.mint:col.grape);
+      const pts=[];
+      let a=0,b=0,sum=0,minY=H;
+      for(let i=0;i<vis.length;i++){
+        const lo=vis[i].t-SMOOTH/2, hi=vis[i].t+SMOOTH/2;
+        while(b<vis.length&&vis[b].t<=hi){ sum+=vis[b].kg; b++; }
+        while(a<i&&vis[a].t<lo){ sum-=vis[a].kg; a++; }
+        const kg=sum/Math.max(1,b-a), y=Y(kg);
+        if(y<minY) minY=y;
+        pts.push({x:X(vis[i].t),y,z:zone(kg)});
+      }
+      const path=(from,to)=>{                      // kvadratiska kurvor via mittpunkter
+        c.moveTo(pts[from].x,pts[from].y);
+        for(let i=from;i<to;i++){
+          const q=pts[i], r=pts[i+1];
+          c.quadraticCurveTo(q.x,q.y,(q.x+r.x)/2,(q.y+r.y)/2);
+        }
+        c.lineTo(pts[to].x,pts[to].y);
+      };
+      const last=pts[pts.length-1];
+      c.beginPath(); path(0,pts.length-1);
+      c.lineTo(last.x,H); c.lineTo(pts[0].x,H); c.closePath();
+      const grad=c.createLinearGradient(0,minY,0,H);
+      grad.addColorStop(0,rgba(col.grape,.20)); grad.addColorStop(1,rgba(col.grape,0));
+      c.fillStyle=grad; c.fill();
+      c.lineWidth=2.5; c.lineJoin="round"; c.lineCap="round";
+      let i=0;
+      while(i<pts.length-1){
+        const z=pts[i].z; let j=i;
+        while(j<pts.length-1&&pts[j].z===z) j++;
+        c.beginPath(); path(i,j); c.strokeStyle=hue(z); c.stroke();
+        i=j;
+      }
+      const cc=hue(last.z);
+      c.fillStyle=rgba(cc,.22); c.beginPath(); c.arc(last.x,last.y,7,0,7); c.fill();
+      c.fillStyle=cc;          c.beginPath(); c.arc(last.x,last.y,3.5,0,7); c.fill();
+    }
+    c.restore();
+  }
+  return {draw,fit,recolor:readColors};
+}
+
+/* ===================== Local storage ===================== */
+/* Everything lives in this browser only. Nothing is uploaded anywhere —
+   the page is static, so there is no server to upload it to. */
+const STORE_KEY="abrahangs.v1";
+const SETTING_IDS=["fPhase","fInjured","fPerDay","fAm","fPm","fProg","fEdge","fHands",
+  "fPct","fWork","fRest","fTol","fReps","fBw","mEdge","mHand","mDur"];
+let storageOK=true;
+function saveStore(){
+  if(!storageOK) return;
+  try{
+    const settings={};
+    for(const id of SETTING_IDS){ const el=$(id); if(el) settings[id]=el.value; }
+    localStorage.setItem(STORE_KEY,JSON.stringify({v:1,maxes,log,settings}));
+  }catch(e){ storageOK=false; noteStorage(); }   // privatläge, full kvot eller blockerad iframe
+}
+function restore(){
+  let d=null;
+  try{ d=JSON.parse(localStorage.getItem(STORE_KEY)); }
+  catch(e){ storageOK=false; noteStorage(); return false; }
+  if(!d||d.v!==1) return false;
+  if(d.maxes) for(const edge of [10,20]) for(const h of ["L","R"]){
+    const v=d.maxes[edge]&&d.maxes[edge][h];
+    if(typeof v==="number"&&isFinite(v)) maxes[edge][h]=v;
+  }
+  if(Array.isArray(d.log)) log.push(...d.log);
+  if(d.settings) for(const id of SETTING_IDS){
+    const el=$(id), v=d.settings[id];
+    if(el&&v!=null&&v!=="") el.value=v;
+  }
+  $("wrapReps").style.display=preset().blocks?"none":"";
+  return true;
+}
+function forgetAll(){
+  if(!confirm("Delete max values, settings and the log from this browser?")) return;
+  try{ localStorage.removeItem(STORE_KEY); }catch(e){}
+  log.length=0;
+  for(const edge of [10,20]) for(const h of ["L","R"]) maxes[edge][h]=null;
+  renderMax(); renderLog();
+}
+function noteStorage(){
+  const el=$("storeNote");
+  if(el) el.textContent=storageOK
+    ? "Max values, settings and the log are saved in this browser. They stay on this device and are lost if you clear site data — download the CSV for anything you want to keep."
+    : "This browser is not letting the page save anything, so the log and your max values will be gone on reload. Private mode or a blocked frame is the usual cause. Download the CSV before you close the tab.";
+}
 
 /* ===================== Start ===================== */
+const tracePass=makeChart($("cvPass")), traceMax=makeChart($("cvMax"));
+function idleDraw(){ const t=performance.now()/1000-IDLE_SPAN; tracePass.draw({t0:t}); traceMax.draw({t0:t}); }
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
 $("btnConnect").onclick=connect;
 $("btnTare").onclick=tare;
 listeners.push(kg=>{
-  if(!session.running&&!mt.running){
+  if(!session.running&&!mt.measuring){
     $("force").innerHTML=kg.toFixed(1)+"<small>kg</small>";
     $("mforce").innerHTML=kg.toFixed(1)+"<small>kg</small>";
-    const scale=Math.max(10,kg*1.3);
-    paint($("fill"),kg,scale,""); paint($("mfill"),kg,scale,"");
+    idleDraw();
   }
 });
 $("btNote").innerHTML=navigator.bluetooth
-  ? "Webbläsaren stöder Web Bluetooth. Tryck <b>Anslut</b>, slå på Progressorn och välj den i listan."
-  : "Den här webbläsaren, eller ramen sidan visas i, ger inte tillgång till Web Bluetooth. <b>Anslut</b> startar då ett demoläge där du håller musknappen eller mellanslag nedtryckt för att simulera kraft.";
+  ? "This browser supports Web Bluetooth. Press <b>Connect</b>, switch the Progressor on and pick it from the list."
+  : "This browser, or the frame the page is shown in, gives no access to Web Bluetooth. <b>Connect</b> then starts a demo mode where you hold the mouse button or spacebar down to simulate force.";
 
-renderMax(); syncPreset(); renderWeek(); renderLog();
+const restored=restore();
+renderMax();
+if(restored) refresh(); else syncPreset();
+renderWeek(); renderLog(); noteStorage();
+SETTING_IDS.forEach(id=>{ const el=$(id); if(el) el.addEventListener("change",saveStore); });
+requestAnimationFrame(()=>{ tracePass.fit(); traceMax.fit(); idleDraw(); });
 </script>
 </body>
 </html>
