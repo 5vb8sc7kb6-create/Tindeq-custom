@@ -74,6 +74,7 @@ nav button{background:none;border:none;border-radius:99px;padding:9px 16px;font-
 nav button:hover{color:var(--grape)}
 nav button[aria-selected="true"]{color:#fff;background:linear-gradient(135deg,var(--grape),var(--grape-2));
   box-shadow:0 8px 18px -9px rgba(108,77,246,.95)}
+body.in-session nav{display:none}          /* inget att navigera till mitt i ett håll */
 .view{display:none}.view.on{display:block;animation:rise .28s ease both}
 @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
@@ -377,6 +378,7 @@ async function connect(){
 function onDisconnect(){
   bt.connected=false; bt.streaming=false; setStatus(false,"Disconnected");
   if(session.running) stopSession(false);
+  abortMax();
 }
 const q=[]; let busy=false;
 function send(op,tag){ return new Promise((res,rej)=>{ q.push({op,tag,res,rej}); pump(); }); }
@@ -571,7 +573,7 @@ function showView(v){
   document.querySelectorAll("nav button").forEach(x=>x.setAttribute("aria-selected",x.dataset.view===v));
   document.querySelectorAll(".view").forEach(s=>s.classList.remove("on"));
   $("v-"+v).classList.add("on");
-  requestAnimationFrame(()=>{ tracePass.fit(); traceMax.fit(); if(!session.running&&!mt.measuring) idleDraw(); });
+  requestAnimationFrame(()=>{ tracePass.fit(); traceMax.fit(); idleDraw(); });
 }
 
 /* ===================== Plan building ===================== */
@@ -683,18 +685,27 @@ function renderMax(){
   }
   refresh(); renderReadiness();
 }
-const mt={running:false,measuring:false,peak:0,t0:0,dur:7,raf:0,samples:[],mean:0};
+const mt={running:false,measuring:false,peak:0,t0:0,dur:7,raf:0,cd:0,samples:[],mean:0};
+function abortMax(){
+  if(!mt.running) return;
+  clearInterval(mt.cd); cancelAnimationFrame(mt.raf);
+  mt.running=false; mt.measuring=false;
+  $("btnStart").disabled=false; $("btnSaveMax").disabled=true;
+  $("mphase").textContent="Stopped"; $("mclock").textContent="--";
+  lockNav();
+}
 $("btnMax").onclick=()=>{
   if(mt.running) return;
   if(!bt.connected&&!demoMode){ connect(); return; }
   const inj=injured(), h=$("mHand").value;
   if(inj&&h===inj&&!maxes[20][inj]&&!confirm("You have marked this hand as injured. A maximal hold is exactly the load you are trying to avoid. Do you want to test anyway?")) return;
   mt.dur=+$("mDur").value||7; mt.peak=0; mt.samples=[]; mt.mean=0; mt.running=true; mt.measuring=false;
+  $("btnStart").disabled=true; lockNav();
   $("btnSaveMax").disabled=true;
   let n=3; $("mphase").textContent="Get ready";
-  const cd=setInterval(()=>{
+  mt.cd=setInterval(()=>{
     $("mclock").textContent=n; beep(660,90);
-    if(n--===0){ clearInterval(cd); beep(1100,260); mt.t0=performance.now(); mt.measuring=true;
+    if(n--===0){ clearInterval(mt.cd); beep(1100,260); mt.t0=performance.now(); mt.measuring=true;
       $("mphase").textContent="Build up and hold"; loopMax(); }
   },1000);
 };
@@ -705,13 +716,13 @@ function loopMax(){
   if(force>mt.peak) mt.peak=force;
   if(el>=1.5) mt.samples.push(force);
   $("mforce").innerHTML=force.toFixed(1)+"<small>kg</small>";
-  traceMax.draw({t0:mt.t0/1000,span:mt.dur,deadUntil:1.5,
+  if(viewOn("max")) traceMax.draw({t0:mt.t0/1000,span:mt.dur,deadUntil:1.5,
     lines:[{kg:mt.peak,color:"coral",label:"peak"},{kg:mt.mean,color:"mint",label:"mean"}]});
   mt.mean=mt.samples.length?mt.samples.reduce((a,b)=>a+b,0)/mt.samples.length:0;
   $("mmean").textContent=mt.mean?mt.mean.toFixed(1)+" kg":"—";
   $("mpeak").textContent=mt.peak.toFixed(1)+" kg";
   if(left>0){ mt.raf=requestAnimationFrame(loopMax); }
-  else{ mt.running=false; mt.measuring=false; beep(440,300);
+  else{ mt.running=false; mt.measuring=false; beep(440,300); $("btnStart").disabled=false; lockNav();
     $("mphase").textContent="Done"; $("mclock").textContent="--";
     $("btnSaveMax").disabled=mt.mean<=0; }
 }
@@ -747,11 +758,13 @@ async function keepAwake(on){
   }catch(e){}
 }
 $("btnStart").onclick=async()=>{
+  if(session.running||mt.running) return;
   if(!bt.connected&&!demoMode){ await connect(); if(!bt.connected&&!demoMode) return; }
   const plan=buildPlan();
   if(plan.some(p=>!p.target)){ refresh(); $("planInfo").scrollIntoView({block:"center"}); return; }
   session.plan=plan; session.i=0; session.running=true;
   beep(880,80);
+  $("btnMax").disabled=true; lockNav();
   $("btnStart").disabled=true; $("btnStop").disabled=false; $("btnSkip").disabled=false;
   keepAwake(true); await startStream(); await tare();
   enterPhase("prep",5); renderReps(); loopSession();
@@ -762,6 +775,7 @@ function enterPhase(p,secs){
   session.phase=p; session.t0=performance.now(); session.dur=secs;
   if(p==="work"){ session.samples=[]; session.inZone=0; session.total=0; session.peak=0; }
 }
+function lockNav(){ document.body.classList.toggle("in-session",session.running||mt.running); }
 function currentRep(){ return session.plan[session.i]; }
 function loopSession(){
   if(!session.running) return;
@@ -785,7 +799,7 @@ function loopSession(){
   $("force").innerHTML=force.toFixed(1)+"<small>kg</small>";
   $("force").className="force"+(cls?" "+cls:"");
   const nowS=performance.now()/1000, holding=session.phase==="work";
-  tracePass.draw({
+  if(viewOn("pass")) tracePass.draw({
     t0:holding?session.t0/1000:nowS-IDLE_SPAN,
     span:holding?session.dur:IDLE_SPAN,
     lo,hi,target:rep?rep.target:null
@@ -829,6 +843,8 @@ function nextRep(){
 function stopSession(done){
   session.running=false; cancelAnimationFrame(session.raf);
   $("btnStart").disabled=false; $("btnStop").disabled=true; $("btnSkip").disabled=true;
+  $("btnMax").disabled=false;
+  lockNav();
   $("phase").textContent=done?"Session complete":"Stopped";
   $("clock").textContent="--"; $("clock").className="clock";
   $("force").className="force";
@@ -1053,15 +1069,24 @@ function noteStorage(){
 
 /* ===================== Start ===================== */
 const tracePass=makeChart($("cvPass")), traceMax=makeChart($("cvMax"));
-function idleDraw(){ const t=performance.now()/1000-IDLE_SPAN; tracePass.draw({t0:t}); traceMax.draw({t0:t}); }
+const viewOn=v=>$("v-"+v).classList.contains("on");
+function idleDraw(){
+  const t=performance.now()/1000-IDLE_SPAN;
+  if(!session.running&&viewOn("pass")) tracePass.draw({t0:t});
+  if(!mt.measuring&&viewOn("max")) traceMax.draw({t0:t});
+}
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
 $("btnConnect").onclick=connect;
 $("btnTare").onclick=tare;
 listeners.push(kg=>{
-  if(!session.running&&!mt.measuring){
+  const t=performance.now()/1000-IDLE_SPAN;
+  if(!session.running){                       // passet ritar sin egen kurva
     $("force").innerHTML=kg.toFixed(1)+"<small>kg</small>";
+    if(viewOn("pass")) tracePass.draw({t0:t});
+  }
+  if(!mt.measuring){                          // maxtestet likaså — de två är oberoende
     $("mforce").innerHTML=kg.toFixed(1)+"<small>kg</small>";
-    idleDraw();
+    if(viewOn("max")) traceMax.draw({t0:t});
   }
 });
 $("btNote").innerHTML=navigator.bluetooth
@@ -1074,6 +1099,7 @@ if(restored) refresh(); else syncPreset();
 renderWeek(); renderLog(); noteStorage();
 SETTING_IDS.forEach(id=>{ const el=$(id); if(el) el.addEventListener("change",saveStore); });
 requestAnimationFrame(()=>{ tracePass.fit(); traceMax.fit(); idleDraw(); });
+addEventListener("resize",()=>requestAnimationFrame(idleDraw));
 </script>
 </body>
 </html>
