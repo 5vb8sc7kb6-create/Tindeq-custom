@@ -71,16 +71,10 @@ nav{display:flex;gap:4px;margin-bottom:24px;padding:5px;width:fit-content;max-wi
   background:rgba(255,255,255,.7);border:1px solid var(--hair);border-radius:99px;box-shadow:var(--shadow)}
 nav button{background:none;border:none;border-radius:99px;padding:9px 16px;font-size:14.5px;font-weight:600;color:var(--ink-soft);white-space:nowrap;
   transition:background .14s,color .14s}
-nav button{position:relative}
 nav button:hover{color:var(--grape)}
-.live{position:absolute;top:5px;right:7px;width:7px;height:7px;border-radius:50%;
-  background:var(--grape);display:none;animation:pulse 1.2s ease-in-out infinite}
-.live.on{display:block}
-.live.rest{background:var(--sky)}
-nav button[aria-selected="true"] .live{background:#fff}
-@keyframes pulse{50%{opacity:.3}}
 nav button[aria-selected="true"]{color:#fff;background:linear-gradient(135deg,var(--grape),var(--grape-2));
   box-shadow:0 8px 18px -9px rgba(108,77,246,.95)}
+body.in-session nav{display:none}          /* inget att navigera till mitt i ett håll */
 .view{display:none}.view.on{display:block;animation:rise .28s ease both}
 @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
@@ -200,7 +194,7 @@ td.g{font-variant-numeric:normal;font-weight:600}
 
 <nav role="tablist">
   <button role="tab" aria-selected="true" data-view="schema">Week</button>
-  <button role="tab" aria-selected="false" data-view="pass">Session<span class="live" id="liveDot"></span></button>
+  <button role="tab" aria-selected="false" data-view="pass">Session</button>
   <button role="tab" aria-selected="false" data-view="max">Max test</button>
   <button role="tab" aria-selected="false" data-view="logg">Log</button>
   <button role="tab" aria-selected="false" data-view="om">Evidence</button>
@@ -697,7 +691,7 @@ $("btnMax").onclick=()=>{
   const inj=injured(), h=$("mHand").value;
   if(inj&&h===inj&&!maxes[20][inj]&&!confirm("You have marked this hand as injured. A maximal hold is exactly the load you are trying to avoid. Do you want to test anyway?")) return;
   mt.dur=+$("mDur").value||7; mt.peak=0; mt.samples=[]; mt.mean=0; mt.running=true; mt.measuring=false;
-  $("btnStart").disabled=true;
+  $("btnStart").disabled=true; lockNav();
   $("btnSaveMax").disabled=true;
   let n=3; $("mphase").textContent="Get ready";
   const cd=setInterval(()=>{
@@ -719,7 +713,7 @@ function loopMax(){
   $("mmean").textContent=mt.mean?mt.mean.toFixed(1)+" kg":"—";
   $("mpeak").textContent=mt.peak.toFixed(1)+" kg";
   if(left>0){ mt.raf=requestAnimationFrame(loopMax); }
-  else{ mt.running=false; mt.measuring=false; beep(440,300); $("btnStart").disabled=false;
+  else{ mt.running=false; mt.measuring=false; beep(440,300); $("btnStart").disabled=false; lockNav();
     $("mphase").textContent="Done"; $("mclock").textContent="--";
     $("btnSaveMax").disabled=mt.mean<=0; }
 }
@@ -760,7 +754,7 @@ $("btnStart").onclick=async()=>{
   if(plan.some(p=>!p.target)){ refresh(); $("planInfo").scrollIntoView({block:"center"}); return; }
   session.plan=plan; session.i=0; session.running=true;
   beep(880,80);
-  $("btnMax").disabled=true;
+  $("btnMax").disabled=true; lockNav();
   $("btnStart").disabled=true; $("btnStop").disabled=false; $("btnSkip").disabled=false;
   keepAwake(true); await startStream(); await tare();
   enterPhase("prep",5); renderReps(); loopSession();
@@ -771,14 +765,13 @@ function enterPhase(p,secs){
   session.phase=p; session.t0=performance.now(); session.dur=secs;
   if(p==="work"){ session.samples=[]; session.inZone=0; session.total=0; session.peak=0; }
 }
-function liveDot(state){ $("liveDot").className="live"+(state?" on "+state:""); }
+function lockNav(){ document.body.classList.toggle("in-session",session.running||mt.running); }
 function currentRep(){ return session.plan[session.i]; }
 function loopSession(){
   if(!session.running) return;
   const rep=currentRep();
   const left=Math.max(0,session.dur-(performance.now()-session.t0)/1000);
   const clock=$("clock"), phaseEl=$("phase");
-  liveDot(session.phase==="rest"?"rest":"work");
   const tol=(+$("fTol").value)/100;
   let lo=null,hi=null;
   if(rep&&rep.target){
@@ -841,7 +834,7 @@ function stopSession(done){
   session.running=false; cancelAnimationFrame(session.raf);
   $("btnStart").disabled=false; $("btnStop").disabled=true; $("btnSkip").disabled=true;
   $("btnMax").disabled=false;
-  liveDot("");
+  lockNav();
   $("phase").textContent=done?"Session complete":"Stopped";
   $("clock").textContent="--"; $("clock").className="clock";
   $("force").className="force";
