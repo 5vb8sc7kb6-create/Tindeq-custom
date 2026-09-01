@@ -378,6 +378,7 @@ async function connect(){
 function onDisconnect(){
   bt.connected=false; bt.streaming=false; setStatus(false,"Disconnected");
   if(session.running) stopSession(false);
+  abortMax();
 }
 const q=[]; let busy=false;
 function send(op,tag){ return new Promise((res,rej)=>{ q.push({op,tag,res,rej}); pump(); }); }
@@ -684,7 +685,15 @@ function renderMax(){
   }
   refresh(); renderReadiness();
 }
-const mt={running:false,measuring:false,peak:0,t0:0,dur:7,raf:0,samples:[],mean:0};
+const mt={running:false,measuring:false,peak:0,t0:0,dur:7,raf:0,cd:0,samples:[],mean:0};
+function abortMax(){
+  if(!mt.running) return;
+  clearInterval(mt.cd); cancelAnimationFrame(mt.raf);
+  mt.running=false; mt.measuring=false;
+  $("btnStart").disabled=false; $("btnSaveMax").disabled=true;
+  $("mphase").textContent="Stopped"; $("mclock").textContent="--";
+  lockNav();
+}
 $("btnMax").onclick=()=>{
   if(mt.running) return;
   if(!bt.connected&&!demoMode){ connect(); return; }
@@ -694,9 +703,9 @@ $("btnMax").onclick=()=>{
   $("btnStart").disabled=true; lockNav();
   $("btnSaveMax").disabled=true;
   let n=3; $("mphase").textContent="Get ready";
-  const cd=setInterval(()=>{
+  mt.cd=setInterval(()=>{
     $("mclock").textContent=n; beep(660,90);
-    if(n--===0){ clearInterval(cd); beep(1100,260); mt.t0=performance.now(); mt.measuring=true;
+    if(n--===0){ clearInterval(mt.cd); beep(1100,260); mt.t0=performance.now(); mt.measuring=true;
       $("mphase").textContent="Build up and hold"; loopMax(); }
   },1000);
 };
@@ -749,6 +758,7 @@ async function keepAwake(on){
   }catch(e){}
 }
 $("btnStart").onclick=async()=>{
+  if(session.running||mt.running) return;
   if(!bt.connected&&!demoMode){ await connect(); if(!bt.connected&&!demoMode) return; }
   const plan=buildPlan();
   if(plan.some(p=>!p.target)){ refresh(); $("planInfo").scrollIntoView({block:"center"}); return; }
@@ -1089,6 +1099,7 @@ if(restored) refresh(); else syncPreset();
 renderWeek(); renderLog(); noteStorage();
 SETTING_IDS.forEach(id=>{ const el=$(id); if(el) el.addEventListener("change",saveStore); });
 requestAnimationFrame(()=>{ tracePass.fit(); traceMax.fit(); idleDraw(); });
+addEventListener("resize",()=>requestAnimationFrame(idleDraw));
 </script>
 </body>
 </html>
