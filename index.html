@@ -82,30 +82,24 @@ h2:first-child{margin-top:0}
 p.lede{color:var(--ink-soft);margin:0 0 16px;max-width:64ch;font-size:15px}
 
 /* ---------- meter card ---------- */
-.stage{display:grid;grid-template-columns:1fr 96px;gap:22px;align-items:end;
+.stage{display:grid;grid-template-columns:minmax(240px,36%) 1fr;gap:22px;align-items:stretch;
   background:linear-gradient(160deg,var(--surface),var(--surface-3));
   border:1px solid var(--hair);border-radius:var(--r);padding:22px;margin-bottom:18px;box-shadow:var(--shadow)}
-.readout{display:flex;flex-direction:column;justify-content:flex-end;height:var(--meter-h)}
+.readout{display:flex;flex-direction:column;justify-content:flex-end;min-height:var(--meter-h)}
 .phase{font-family:"Outfit",sans-serif;font-weight:600;font-size:15px;color:var(--grape);
   align-self:flex-start;margin:0 auto auto 0;padding:6px 14px;border-radius:99px;
   background:rgba(108,77,246,.10);border:1px solid var(--grape-soft)}
 .clock{font-family:"Outfit",sans-serif;font-weight:700;font-size:clamp(56px,16vw,100px);line-height:.86;font-variant-numeric:tabular-nums;margin-bottom:12px;letter-spacing:-.03em}
 .clock.work{color:var(--grape)}.clock.rest{color:var(--sky)}
 .force{font-family:"Outfit",sans-serif;font-weight:700;font-size:clamp(38px,10vw,60px);line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.force.inzone{color:var(--mint)}.force.over{color:var(--coral)}
 .force small{font-size:.36em;font-weight:500;color:var(--ink-soft);margin-left:6px}
 .target-line{font-size:15px;color:var(--ink-soft);margin-top:8px}
 .target-line b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
-.meter{position:relative;height:var(--meter-h);border-radius:20px;background:rgba(108,77,246,.09);
-  border:1px solid var(--hair);overflow:hidden;box-shadow:inset 0 2px 6px rgba(36,28,51,.07)}
-.fill{position:absolute;left:0;right:0;bottom:0;height:0;border-radius:16px 16px 18px 18px;
-  background:linear-gradient(180deg,var(--grape-2),var(--grape));transition:height .05s linear,background .2s}
-.fill.inzone{background:linear-gradient(180deg,#4FE0B0,var(--mint));box-shadow:0 0 24px rgba(15,191,138,.55)}
-.fill.over{background:linear-gradient(180deg,#FF8A76,var(--coral));box-shadow:0 0 24px rgba(255,78,100,.5)}
-.band{position:absolute;left:0;right:0;background:rgba(15,191,138,.20);
-  border-top:2px dashed var(--mint);border-bottom:2px dashed var(--mint);display:none}
-.band.show{display:block}
-.peakline{position:absolute;left:0;right:0;height:0;border-top:2px solid var(--coral);display:none}
-.peakline.show{display:block}
+.chart{position:relative;height:var(--meter-h);border-radius:14px;overflow:hidden;border:1px solid var(--hair);
+  background:linear-gradient(180deg,rgba(108,77,246,.05),rgba(108,77,246,.11));
+  box-shadow:inset 0 1px 5px rgba(36,28,51,.07)}
+.chart canvas{display:block;width:100%;height:100%}
 
 /* ---------- rep chips ---------- */
 .reps{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 18px}
@@ -175,7 +169,9 @@ td.g{font-variant-numeric:normal;font-weight:600}
 .day.off .what,.day.off .slot .t{color:var(--ink-soft);font-weight:500}
 
 @media(max-width:560px){
-  .stage{grid-template-columns:1fr 64px;gap:14px;padding:16px}
+  .stage{grid-template-columns:1fr;gap:14px;padding:16px}
+  .readout{min-height:0}
+  .chart{height:min(34vh,230px)}
   .wrap{padding:16px 14px 44px}
   nav{overflow-x:auto;width:100%;flex-wrap:nowrap;border-radius:var(--r)}
   .day{grid-template-columns:40px 1fr;gap:10px;padding:12px}
@@ -241,10 +237,7 @@ td.g{font-variant-numeric:normal;font-weight:600}
       <div class="force" id="force">0.0<small>kg</small></div>
       <div class="target-line" id="tline">Target: <b>—</b></div>
     </div>
-    <div class="meter" id="meter">
-      <div class="band" id="band"></div>
-      <div class="fill" id="fill"></div>
-    </div>
+    <div class="chart"><canvas id="cvPass"></canvas></div>
   </div>
 
   <div class="reps" id="reps"></div>
@@ -291,10 +284,7 @@ td.g{font-variant-numeric:normal;font-weight:600}
       <div class="force" id="mforce">0.0<small>kg</small></div>
       <div class="target-line">Mean: <b id="mmean">—</b> · peak <span id="mpeak">—</span></div>
     </div>
-    <div class="meter" id="mmeter">
-      <div class="peakline show" id="mpeakline"></div>
-      <div class="fill" id="mfill"></div>
-    </div>
+    <div class="chart"><canvas id="cvMax"></canvas></div>
   </div>
 
   <div class="row">
@@ -358,7 +348,7 @@ const CMD={TARE:0x64,START:0x65,STOP:0x66,BATTERY:0x6f};
 const bt={dev:null,ctrl:null,data:null,connected:false,streaming:false,lastKind:null,batt:null};
 let force=0, demoMode=false;
 const listeners=[];
-function onSample(kg){ force=kg; listeners.forEach(f=>f(kg)); }
+function onSample(kg){ force=kg; pushSample(kg); listeners.forEach(f=>f(kg)); }
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const $=id=>document.getElementById(id);
 
@@ -581,6 +571,7 @@ function showView(v){
   document.querySelectorAll("nav button").forEach(x=>x.setAttribute("aria-selected",x.dataset.view===v));
   document.querySelectorAll(".view").forEach(s=>s.classList.remove("on"));
   $("v-"+v).classList.add("on");
+  requestAnimationFrame(()=>{ tracePass.fit(); traceMax.fit(); if(!session.running&&!mt.measuring) idleDraw(); });
 }
 
 /* ===================== Plan building ===================== */
@@ -692,22 +683,18 @@ function renderMax(){
   }
   refresh(); renderReadiness();
 }
-function paint(fillEl,kg,scale,cls){
-  fillEl.style.height=(Math.max(0,Math.min(1,kg/scale))*100)+"%";
-  fillEl.className="fill"+(cls?" "+cls:"");
-}
-const mt={running:false,peak:0,t0:0,dur:7,raf:0,samples:[],mean:0};
+const mt={running:false,measuring:false,peak:0,t0:0,dur:7,raf:0,samples:[],mean:0};
 $("btnMax").onclick=()=>{
   if(mt.running) return;
   if(!bt.connected&&!demoMode){ connect(); return; }
   const inj=injured(), h=$("mHand").value;
   if(inj&&h===inj&&!maxes[20][inj]&&!confirm("You have marked this hand as injured. A maximal hold is exactly the load you are trying to avoid. Do you want to test anyway?")) return;
-  mt.dur=+$("mDur").value||7; mt.peak=0; mt.samples=[]; mt.mean=0; mt.running=true;
+  mt.dur=+$("mDur").value||7; mt.peak=0; mt.samples=[]; mt.mean=0; mt.running=true; mt.measuring=false;
   $("btnSaveMax").disabled=true;
   let n=3; $("mphase").textContent="Get ready";
   const cd=setInterval(()=>{
     $("mclock").textContent=n; beep(660,90);
-    if(n--===0){ clearInterval(cd); beep(1100,260); mt.t0=performance.now();
+    if(n--===0){ clearInterval(cd); beep(1100,260); mt.t0=performance.now(); mt.measuring=true;
       $("mphase").textContent="Build up and hold"; loopMax(); }
   },1000);
 };
@@ -717,15 +704,14 @@ function loopMax(){
   $("mclock").textContent=left.toFixed(1);
   if(force>mt.peak) mt.peak=force;
   if(el>=1.5) mt.samples.push(force);
-  const scale=Math.max(10,mt.peak*1.2,force*1.2);
-  paint($("mfill"),force,scale,el>=1.5?"inzone":"");
-  $("mpeakline").style.bottom=Math.min(99,(mt.peak/scale)*100)+"%";
   $("mforce").innerHTML=force.toFixed(1)+"<small>kg</small>";
+  traceMax.draw({t0:mt.t0/1000,span:mt.dur,deadUntil:1.5,
+    lines:[{kg:mt.peak,color:"coral",label:"peak"},{kg:mt.mean,color:"mint",label:"mean"}]});
   mt.mean=mt.samples.length?mt.samples.reduce((a,b)=>a+b,0)/mt.samples.length:0;
   $("mmean").textContent=mt.mean?mt.mean.toFixed(1)+" kg":"—";
   $("mpeak").textContent=mt.peak.toFixed(1)+" kg";
   if(left>0){ mt.raf=requestAnimationFrame(loopMax); }
-  else{ mt.running=false; beep(440,300);
+  else{ mt.running=false; mt.measuring=false; beep(440,300);
     $("mphase").textContent="Done"; $("mclock").textContent="--";
     $("btnSaveMax").disabled=mt.mean<=0; }
 }
@@ -783,25 +769,27 @@ function loopSession(){
   const left=Math.max(0,session.dur-(performance.now()-session.t0)/1000);
   const clock=$("clock"), phaseEl=$("phase");
   const tol=(+$("fTol").value)/100;
-  const scale=rep&&rep.target?Math.max(rep.target*2.2,force*1.15,6):Math.max(force*1.2,10);
+  let lo=null,hi=null;
   if(rep&&rep.target){
-    const lo=rep.target*(1-tol), hi=rep.target*(1+tol);
-    const band=$("band"); band.classList.add("show");
-    band.style.bottom=(lo/scale*100)+"%";
-    band.style.height=((hi-lo)/scale*100)+"%";
+    lo=rep.target*(1-tol); hi=rep.target*(1+tol);
     $("tline").innerHTML=`Target: <b>${rep.target.toFixed(1)} kg</b> · ${lo.toFixed(1)}–${hi.toFixed(1)} · ${rep.edge} mm`;
   }
   let cls="";
   if(session.phase==="work"&&rep){
-    const lo=rep.target*(1-tol), hi=rep.target*(1+tol);
     cls=force>hi?"over":(force>=lo?"inzone":"");
     session.total++;
     if(force>=lo&&force<=hi) session.inZone++;
     if(force>session.peak) session.peak=force;
     session.samples.push(force);
   }
-  paint($("fill"),force,scale,cls);
   $("force").innerHTML=force.toFixed(1)+"<small>kg</small>";
+  $("force").className="force"+(cls?" "+cls:"");
+  const nowS=performance.now()/1000, holding=session.phase==="work";
+  tracePass.draw({
+    t0:holding?session.t0/1000:nowS-IDLE_SPAN,
+    span:holding?session.dur:IDLE_SPAN,
+    lo,hi,target:rep?rep.target:null
+  });
   const hand=rep?(rep.hand==="L"?"left":"right"):"";
   if(session.phase==="prep"){
     phaseEl.textContent=GRIPS[rep.grip].label+" · "+hand;
@@ -843,7 +831,7 @@ function stopSession(done){
   $("btnStart").disabled=false; $("btnStop").disabled=true; $("btnSkip").disabled=true;
   $("phase").textContent=done?"Session complete":"Stopped";
   $("clock").textContent="--"; $("clock").className="clock";
-  $("band").classList.remove("show");
+  $("force").className="force";
   keepAwake(false); renderReps();
   if(done){ beep(880,160); setTimeout(()=>beep(1180,320),180); }
 }
@@ -874,6 +862,129 @@ $("btnCsv").onclick=()=>{
 };
 $("btnClear").onclick=()=>{ log.length=0; renderLog(); saveStore(); };
 $("btnForget").onclick=forgetAll;
+
+/* ===================== Force chart ===================== */
+/* En rullande kurva över kraft mot tid. Under ett håll spänner x-axeln
+   över hela hålltiden, så man ser om nivån höll hela vägen. Däremellan
+   rullar den de senaste sekunderna förbi. */
+const IDLE_SPAN=12;
+const feed=[];                                  // {t,kg}, råsignalen
+function pushSample(kg){
+  const t=performance.now()/1000;
+  feed.push({t,kg});
+  let i=0, cut=t-90;
+  while(i<feed.length&&feed[i].t<cut) i++;
+  if(i) feed.splice(0,i);
+}
+const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function rgba(hex,a){
+  const h=(hex||"").replace("#","");
+  if(h.length<3) return `rgba(110,101,132,${a})`;
+  const n=parseInt(h.length===3?h.split("").map(c=>c+c).join(""):h.slice(0,6),16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+}
+function makeChart(cv){
+  const c=cv.getContext("2d");
+  let W=1,H=1,scale=10;
+  const col={};
+  function readColors(){
+    col.grape=cssv("--grape")||"#6C4DF6"; col.mint=cssv("--mint")||"#0FBF8A";
+    col.coral=cssv("--coral")||"#FF4E64"; col.soft=cssv("--ink-soft")||"#6E6584";
+  }
+  function fit(){
+    const r=cv.getBoundingClientRect(), d=Math.min(2,window.devicePixelRatio||1);
+    W=Math.max(1,r.width); H=Math.max(1,r.height);
+    cv.width=Math.round(W*d); cv.height=Math.round(H*d);
+    c.setTransform(d,0,0,d,0,0);
+  }
+  readColors(); fit();
+  addEventListener("resize",fit);
+
+  function draw(o){
+    o=o||{};
+    const t0=o.t0!=null?o.t0:performance.now()/1000-IDLE_SPAN;
+    const span=o.span>0?o.span:IDLE_SPAN, t1=t0+span;
+    const X=t=>((t-t0)/span)*W, Y=kg=>H-(Math.max(0,Math.min(kg,scale))/scale)*H;
+
+    let top=6;
+    for(const p of feed) if(p.t>=t0&&p.kg>top) top=p.kg;
+    if(o.hi) top=Math.max(top,o.hi*1.15);
+    if(o.target) top=Math.max(top,o.target*1.5);
+    for(const l of (o.lines||[])) if(l&&l.kg) top=Math.max(top,l.kg*1.12);
+    scale+=(top*1.12-scale)*0.10;
+    if(!isFinite(scale)||scale<1) scale=10;
+
+    c.clearRect(0,0,W,H);
+    c.save(); c.beginPath(); c.rect(0,0,W,H); c.clip();
+    c.font="600 11px 'Plus Jakarta Sans',system-ui,sans-serif";
+
+    // sekundrutnät
+    const step=span<=15?1:5;                       // linjerna räknas från t0, så en ruta = en sekund av hållet
+    c.strokeStyle=rgba(col.soft,.14); c.lineWidth=1;
+    for(let k=step;k<span;k+=step){
+      const x=Math.round(X(t0+k))+.5;
+      c.beginPath(); c.moveTo(x,0); c.lineTo(x,H); c.stroke();
+    }
+    // uppbyggnaden som inte räknas (maxtestet)
+    if(o.deadUntil){
+      const x=Math.round(X(t0+o.deadUntil))+.5;
+      c.fillStyle=rgba(col.soft,.10); c.fillRect(0,0,x,H);
+      c.strokeStyle=rgba(col.soft,.55); c.setLineDash([4,4]); c.lineWidth=1.5;
+      c.beginPath(); c.moveTo(x,0); c.lineTo(x,H); c.stroke(); c.setLineDash([]);
+    }
+    // målzon
+    if(o.lo!=null&&o.hi!=null){
+      c.fillStyle=rgba(col.mint,.17); c.fillRect(0,Y(o.hi),W,Y(o.lo)-Y(o.hi));
+      c.strokeStyle=rgba(col.mint,.85); c.lineWidth=1.5; c.setLineDash([6,5]);
+      for(const v of [o.lo,o.hi]){
+        const y=Math.round(Y(v))+.5;
+        c.beginPath(); c.moveTo(0,y); c.lineTo(W,y); c.stroke();
+      }
+      c.setLineDash([]);
+    }
+    // extra vågräta linjer, t.ex. topp och snitt
+    let lastLabelY=-99;
+    for(const l of (o.lines||[])){
+      if(!l||!l.kg) continue;
+      const y=Math.round(Y(l.kg))+.5, cc=col[l.color]||col.soft;
+      c.strokeStyle=rgba(cc,.75); c.lineWidth=1.5; c.setLineDash([3,4]);
+      c.beginPath(); c.moveTo(0,y); c.lineTo(W,y); c.stroke(); c.setLineDash([]);
+      if(l.label){
+        let ly=Math.max(12,y-6);
+        if(Math.abs(ly-lastLabelY)<13) ly=y+14;      // krockar med föregående etikett
+        lastLabelY=ly;
+        c.fillStyle=rgba(cc,.95); c.fillText(l.label,7,Math.min(H-4,ly));
+      }
+    }
+    // kurvan
+    const vis=[];
+    for(const p of feed) if(p.t>=t0-span*0.04&&p.t<=t1) vis.push(p);
+    if(vis.length>1){
+      const zone=p=>o.lo==null?0:(p.kg>o.hi?2:(p.kg>=o.lo?1:0));
+      const hue=z=>z===2?col.coral:(z===1?col.mint:col.grape);
+      c.beginPath(); c.moveTo(X(vis[0].t),H);
+      for(const p of vis) c.lineTo(X(p.t),Y(p.kg));
+      c.lineTo(X(vis[vis.length-1].t),H); c.closePath();
+      c.fillStyle=rgba(col.grape,.09); c.fill();
+      c.lineWidth=2.5; c.lineJoin="round"; c.lineCap="round";
+      let i=0;
+      while(i<vis.length-1){
+        const z=zone(vis[i]); let j=i;
+        while(j<vis.length-1&&zone(vis[j])===z) j++;
+        c.beginPath(); c.moveTo(X(vis[i].t),Y(vis[i].kg));
+        for(let k=i+1;k<=j;k++) c.lineTo(X(vis[k].t),Y(vis[k].kg));
+        c.strokeStyle=hue(z); c.stroke();
+        i=j;
+      }
+      const last=vis[vis.length-1], cc=hue(zone(last));
+      const lx=X(last.t), ly=Y(last.kg);
+      c.fillStyle=rgba(cc,.22); c.beginPath(); c.arc(lx,ly,7,0,7); c.fill();
+      c.fillStyle=cc;          c.beginPath(); c.arc(lx,ly,3.5,0,7); c.fill();
+    }
+    c.restore();
+  }
+  return {draw,fit,recolor:readColors};
+}
 
 /* ===================== Local storage ===================== */
 /* Everything lives in this browser only. Nothing is uploaded anywhere —
@@ -922,15 +1033,16 @@ function noteStorage(){
 }
 
 /* ===================== Start ===================== */
+const tracePass=makeChart($("cvPass")), traceMax=makeChart($("cvMax"));
+function idleDraw(){ const t=performance.now()/1000-IDLE_SPAN; tracePass.draw({t0:t}); traceMax.draw({t0:t}); }
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
 $("btnConnect").onclick=connect;
 $("btnTare").onclick=tare;
 listeners.push(kg=>{
-  if(!session.running&&!mt.running){
+  if(!session.running&&!mt.measuring){
     $("force").innerHTML=kg.toFixed(1)+"<small>kg</small>";
     $("mforce").innerHTML=kg.toFixed(1)+"<small>kg</small>";
-    const scale=Math.max(10,kg*1.3);
-    paint($("fill"),kg,scale,""); paint($("mfill"),kg,scale,"");
+    idleDraw();
   }
 });
 $("btNote").innerHTML=navigator.bluetooth
@@ -942,6 +1054,7 @@ renderMax();
 if(restored) refresh(); else syncPreset();
 renderWeek(); renderLog(); noteStorage();
 SETTING_IDS.forEach(id=>{ const el=$(id); if(el) el.addEventListener("change",saveStore); });
+requestAnimationFrame(()=>{ tracePass.fit(); traceMax.fit(); idleDraw(); });
 </script>
 </body>
 </html>
