@@ -868,6 +868,8 @@ $("btnForget").onclick=forgetAll;
    över hela hålltiden, så man ser om nivån höll hela vägen. Däremellan
    rullar den de senaste sekunderna förbi. */
 const IDLE_SPAN=12;
+const SMOOTH=0.14;      // sekunder. Bara hur kurvan ritas — siffror, snitt,
+                        // topp och tid i zon räknas alltid på råa sampel.
 const feed=[];                                  // {t,kg}, råsignalen
 function pushSample(kg){
   const t=performance.now()/1000;
@@ -956,30 +958,47 @@ function makeChart(cv){
         c.fillStyle=rgba(cc,.95); c.fillText(l.label,7,Math.min(H-4,ly));
       }
     }
-    // kurvan
+    // kurvan: centrerat glidande medel, ritad genom mjuka kurvsegment
     const vis=[];
     for(const p of feed) if(p.t>=t0-span*0.04&&p.t<=t1) vis.push(p);
     if(vis.length>1){
-      const zone=p=>o.lo==null?0:(p.kg>o.hi?2:(p.kg>=o.lo?1:0));
+      const zone=kg=>o.lo==null?0:(kg>o.hi?2:(kg>=o.lo?1:0));
       const hue=z=>z===2?col.coral:(z===1?col.mint:col.grape);
-      c.beginPath(); c.moveTo(X(vis[0].t),H);
-      for(const p of vis) c.lineTo(X(p.t),Y(p.kg));
-      c.lineTo(X(vis[vis.length-1].t),H); c.closePath();
-      c.fillStyle=rgba(col.grape,.09); c.fill();
+      const pts=[];
+      let a=0,b=0,sum=0,minY=H;
+      for(let i=0;i<vis.length;i++){
+        const lo=vis[i].t-SMOOTH/2, hi=vis[i].t+SMOOTH/2;
+        while(b<vis.length&&vis[b].t<=hi){ sum+=vis[b].kg; b++; }
+        while(a<i&&vis[a].t<lo){ sum-=vis[a].kg; a++; }
+        const kg=sum/Math.max(1,b-a), y=Y(kg);
+        if(y<minY) minY=y;
+        pts.push({x:X(vis[i].t),y,z:zone(kg)});
+      }
+      const path=(from,to)=>{                      // kvadratiska kurvor via mittpunkter
+        c.moveTo(pts[from].x,pts[from].y);
+        for(let i=from;i<to;i++){
+          const q=pts[i], r=pts[i+1];
+          c.quadraticCurveTo(q.x,q.y,(q.x+r.x)/2,(q.y+r.y)/2);
+        }
+        c.lineTo(pts[to].x,pts[to].y);
+      };
+      const last=pts[pts.length-1];
+      c.beginPath(); path(0,pts.length-1);
+      c.lineTo(last.x,H); c.lineTo(pts[0].x,H); c.closePath();
+      const grad=c.createLinearGradient(0,minY,0,H);
+      grad.addColorStop(0,rgba(col.grape,.20)); grad.addColorStop(1,rgba(col.grape,0));
+      c.fillStyle=grad; c.fill();
       c.lineWidth=2.5; c.lineJoin="round"; c.lineCap="round";
       let i=0;
-      while(i<vis.length-1){
-        const z=zone(vis[i]); let j=i;
-        while(j<vis.length-1&&zone(vis[j])===z) j++;
-        c.beginPath(); c.moveTo(X(vis[i].t),Y(vis[i].kg));
-        for(let k=i+1;k<=j;k++) c.lineTo(X(vis[k].t),Y(vis[k].kg));
-        c.strokeStyle=hue(z); c.stroke();
+      while(i<pts.length-1){
+        const z=pts[i].z; let j=i;
+        while(j<pts.length-1&&pts[j].z===z) j++;
+        c.beginPath(); path(i,j); c.strokeStyle=hue(z); c.stroke();
         i=j;
       }
-      const last=vis[vis.length-1], cc=hue(zone(last));
-      const lx=X(last.t), ly=Y(last.kg);
-      c.fillStyle=rgba(cc,.22); c.beginPath(); c.arc(lx,ly,7,0,7); c.fill();
-      c.fillStyle=cc;          c.beginPath(); c.arc(lx,ly,3.5,0,7); c.fill();
+      const cc=hue(last.z);
+      c.fillStyle=rgba(cc,.22); c.beginPath(); c.arc(last.x,last.y,7,0,7); c.fill();
+      c.fillStyle=cc;          c.beginPath(); c.arc(last.x,last.y,3.5,0,7); c.fill();
     }
     c.restore();
   }
