@@ -128,6 +128,7 @@ input:hover,select:hover{border-color:var(--grape-soft)}
 input:focus,select:focus{outline:none;border-color:var(--grape);box-shadow:0 0 0 4px rgba(108,77,246,.16)}
 input[type=time]{padding-left:9px;padding-right:6px;min-width:0}
 .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.rowlabel{font-size:13px;font-weight:600;color:var(--ink-soft);letter-spacing:.01em}
 
 /* ---------- tables ---------- */
 table{width:100%;border-collapse:collapse;font-size:14.5px;font-variant-numeric:tabular-nums;
@@ -341,7 +342,7 @@ body.run.done .cue{font-size:16px;color:var(--ink)}
 <!-- ============ MAX TEST ============ -->
 <section class="view" id="v-max">
   <h2>Max test, one hand</h2>
-  <p class="lede">A seven-second hold in half crimp, the same as the study's strength test. Build the force during the first second and hold it as steadily as you can. What gets saved is the mean force from 1.5 seconds onwards — not the peak, since a peak you hold for half a second says nothing about what you can manage for ten.</p>
+  <p class="lede">A seven-second hold in half crimp, the same as the study's strength test. Build the force during the first second and hold it as steadily as you can. What gets saved is the mean force from 1.5 seconds onwards — not the peak, since a peak you hold for half a second says nothing about what you can manage for ten. Already know your max? Type it in below instead — the test is only a way of getting the number.</p>
 
   <div class="stage">
     <div class="readout">
@@ -360,6 +361,13 @@ body.run.done .cue{font-size:16px;color:var(--ink)}
     <input type="number" id="fBw" value="75" min="30" max="150" style="width:88px" aria-label="Body weight kg">
     <button class="btn primary" id="btnMax">Start test</button>
     <button class="btn ghost" id="btnSaveMax" disabled>Save as max</button>
+  </div>
+  <div class="row">
+    <span class="rowlabel">Already know it?</span>
+    <input type="number" id="mKnown" step="0.1" min="1" max="200" placeholder="kg" style="width:100px"
+           aria-label="Known max in kilograms for the selected edge and hand">
+    <button class="btn" id="btnKnownMax">Save without testing</button>
+    <button class="btn ghost" id="btnClearMax" disabled>Clear</button>
   </div>
   <div class="note" id="maxNote"></div>
   <div class="maxgrid" id="maxgrid"></div>
@@ -684,7 +692,7 @@ function renderPlanInfo(){
   const miss=need.filter(h=>!refMax(edge,h));
   if(miss.length){
     box.className="note warn";
-    box.innerHTML=`No reference value for <b>${miss.map(h=>h==="L"?"left":"right").join(" and ")}</b> on the ${edge} mm edge. Run a max test first — without measured force the percentage is a guess, and that was the study's biggest weakness.`;
+    box.innerHTML=`No reference value for <b>${miss.map(h=>h==="L"?"left":"right").join(" and ")}</b> on the ${edge} mm edge. Run a max test first, or type in a value you already know on the Max test page — without a real force the percentage is a guess, and that was the study's biggest weakness.`;
     return;
   }
   if(phase()==="rehab"&&$("fProg").value==="maxhang"){
@@ -746,10 +754,40 @@ function renderMax(){
     note.innerHTML=`Don't max test the <b>${inj==="L"?"left":"right"}</b> hand yet. Test the healthy side, and that number is used as the reference for both.`;
   }else{
     note.className="note";
-    note.innerHTML="A rough benchmark for a one-hand half crimp on 20 mm: around 50 percent of body weight is decent, 60 and up is strong. The spread is wide — the curve over months says more than any single number.";
+    note.innerHTML="A rough benchmark for a one-hand half crimp on 20 mm: around 50 percent of body weight is decent, 60 and up is strong. The spread is wide — the curve over months says more than any single number. A value you already know can be typed straight in instead of tested.";
   }
-  refresh(); renderReadiness();
+  syncKnown(); refresh(); renderReadiness();
 }
+
+/* ---- känt max: skrivs in för hand, ingen mätning behövs ---- */
+function syncKnown(){
+  const v=maxes[$("mEdge").value][$("mHand").value];
+  $("mKnown").value=v?v.toFixed(1):"";
+  $("btnClearMax").disabled=!v;
+}
+$("btnKnownMax").onclick=()=>{
+  if(mt.running) return;
+  const e=$("mEdge").value, h=$("mHand").value, v=+$("mKnown").value;
+  if(!$("mKnown").value.trim()||!isFinite(v)||v<=0||v>200){
+    const n=$("maxNote"); n.className="note warn";
+    n.innerHTML="Type the max as <b>kilograms of force</b> for the selected edge and hand, somewhere between 1 and 200. It is the number the test would have produced: a force you can hold for seven seconds, not a one-off peak.";
+    $("mKnown").focus(); return;
+  }
+  maxes[e][h]=v;
+  log.push({tid:new Date().toISOString(),typ:"maxentered",grepp:"hc",list:e,hand:h,
+    mal:"",topp:"",snitt:v,izon:"",sek:""});
+  renderMax(); renderLog(); saveStore();
+};
+$("btnClearMax").onclick=()=>{
+  if(mt.running) return;
+  const e=$("mEdge").value, h=$("mHand").value;
+  if(!maxes[e][h]) return;
+  if(!confirm(`Remove the saved max for ${e} mm, ${h==="L"?"left":"right"} hand?`)) return;
+  maxes[e][h]=null;
+  renderMax(); saveStore();
+};
+$("mEdge").addEventListener("change",syncKnown);
+$("mHand").addEventListener("change",syncKnown);
 const mt={running:false,measuring:false,peak:0,t0:0,dur:7,raf:0,cd:0,samples:[],mean:0};
 function abortMax(){
   if(!mt.running) return;
@@ -964,10 +1002,10 @@ function renderLog(){
   if(!log.length){ w.innerHTML='<div class="empty">Nothing logged yet.</div>'; return; }
   const rows=log.slice().reverse().map(r=>`<tr>
     <td>${new Date(r.tid).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}</td>
-    <td class="g">${r.typ==="maxtest"?"Max test":GRIPS[r.grepp].label}</td>
+    <td class="g">${r.typ==="maxtest"?"Max test":r.typ==="maxentered"?"Entered max":GRIPS[r.grepp].label}</td>
     <td>${r.list} mm</td><td>${r.hand==="L"?"L":"R"}</td>
     <td>${r.mal?(+r.mal).toFixed(1):"—"}</td>
-    <td>${(+r.topp).toFixed(1)}</td>
+    <td>${r.topp!==""&&r.topp!=null?(+r.topp).toFixed(1):"—"}</td>
     <td>${r.snitt!==""?(+r.snitt).toFixed(1):"—"}</td>
     <td>${r.izon!==""?Math.round(r.izon)+" %":"—"}</td></tr>`).join("");
   w.innerHTML=`<table><thead><tr><th>Time</th><th>Grip</th><th>Edge</th><th>Hand</th>
