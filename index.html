@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Abrahangs — Tindeq Progressor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --concrete:#DCDFD8; --concrete-2:#CDD2C9; --ink:#171A17; --ink-soft:#5A6159;
+  --ultra:#2438A8; --ultra-soft:#8B95CE; --rust:#A3341F; --lichen:#5F7F2E;
+  --hair:rgba(23,26,23,.18); --meter-h:min(44vh,340px);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--concrete);color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:16px;line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+.wrap{max-width:960px;margin:0 auto;padding:18px 18px 48px}
+.bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:18px}
+.mark{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:26px;letter-spacing:-.01em;margin-right:auto}
+.mark span{color:var(--ultra)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--ink-soft);display:inline-block;margin-right:7px}
+.dot.on{background:var(--lichen)}
+.status{font-size:13.5px;color:var(--ink-soft)}
+button{font:inherit;color:inherit;cursor:pointer}
+.btn{background:transparent;border:1.5px solid var(--ink);border-radius:2px;padding:7px 14px;font-size:14.5px;font-weight:500;transition:background .12s,color .12s}
+.btn:hover{background:var(--ink);color:var(--concrete)}
+.btn:focus-visible{outline:3px solid var(--ultra);outline-offset:2px}
+.btn.primary{background:var(--ultra);border-color:var(--ultra);color:#fff}
+.btn.primary:hover{background:#1a2a86;border-color:#1a2a86}
+.btn.ghost{border-color:var(--hair);color:var(--ink-soft)}
+.btn.ghost:hover{background:var(--concrete-2);color:var(--ink)}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.btn.big{padding:13px 26px;font-size:17px}
+nav{display:flex;gap:2px;margin-bottom:22px}
+nav button{background:none;border:none;border-bottom:2px solid transparent;padding:8px 13px 7px;font-size:15px;color:var(--ink-soft)}
+nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ultra);font-weight:600}
+.view{display:none}.view.on{display:block}
+h2{font-family:"IBM Plex Sans Condensed",sans-serif;font-size:21px;margin:26px 0 4px;font-weight:600}
+h2:first-child{margin-top:0}
+p.lede{color:var(--ink-soft);margin:0 0 16px;max-width:64ch;font-size:15px}
+.stage{display:grid;grid-template-columns:1fr 92px;gap:22px;align-items:end;border:1.5px solid var(--hair);background:var(--concrete-2);padding:20px;margin-bottom:16px}
+.readout{display:flex;flex-direction:column;justify-content:flex-end;height:var(--meter-h)}
+.phase{font-family:"IBM Plex Sans Condensed",sans-serif;font-size:16px;color:var(--ink-soft);margin-bottom:2px;min-height:1.3em}
+.clock{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:clamp(56px,16vw,100px);line-height:.86;font-variant-numeric:tabular-nums;margin-bottom:12px}
+.clock.work{color:var(--ultra)}.clock.rest{color:var(--ink-soft)}
+.force{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:clamp(38px,10vw,60px);line-height:1;font-variant-numeric:tabular-nums}
+.force small{font-size:.36em;font-weight:400;color:var(--ink-soft);margin-left:6px}
+.target-line{font-size:15px;color:var(--ink-soft);margin-top:6px}
+.target-line b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.meter{position:relative;height:var(--meter-h);border:1.5px solid var(--ink);background:var(--concrete);overflow:hidden}
+.fill{position:absolute;left:0;right:0;bottom:0;height:0;background:var(--ultra-soft);transition:height .05s linear}
+.fill.inzone{background:var(--ultra)}.fill.over{background:var(--rust)}
+.band{position:absolute;left:0;right:0;background:rgba(36,56,168,.16);border-top:1.5px dashed var(--ultra);border-bottom:1.5px dashed var(--ultra);display:none}
+.band.show{display:block}
+.peakline{position:absolute;left:0;right:0;height:0;border-top:1.5px solid var(--rust);display:none}
+.peakline.show{display:block}
+.reps{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 16px}
+.rep{width:24px;height:24px;border:1.5px solid var(--hair);display:grid;place-items:center;font-size:11px;color:var(--ink-soft)}
+.rep.done{background:var(--ultra);border-color:var(--ultra);color:#fff}
+.rep.now{border-color:var(--ink);border-width:2.5px;color:var(--ink);font-weight:700}
+.rep.L::after{content:"V"}.rep.R::after{content:"H"}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px 18px;margin-bottom:18px}
+label{display:block;font-size:13.5px;color:var(--ink-soft);margin-bottom:4px}
+input[type=number],select{width:100%;font:inherit;font-variant-numeric:tabular-nums;padding:8px 9px;border:1.5px solid var(--hair);background:var(--concrete-2);border-radius:2px;color:var(--ink)}
+input:focus,select:focus{outline:2px solid var(--ultra);border-color:var(--ultra)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:14.5px;font-variant-numeric:tabular-nums}
+th{text-align:left;font-weight:600;font-size:13px;color:var(--ink-soft);border-bottom:1.5px solid var(--ink);padding:6px 8px 6px 0}
+td{padding:7px 8px 7px 0;border-bottom:1px solid var(--hair)}
+td.g{font-variant-numeric:normal}
+.empty{color:var(--ink-soft);font-size:15px;padding:14px 0}
+.note{border-left:3px solid var(--ultra);padding:10px 0 10px 14px;margin:0 0 18px;font-size:14.5px;color:var(--ink-soft);max-width:66ch}
+.note b{color:var(--ink)}
+.note.warn{border-left-color:var(--rust)}
+.note.ok{border-left-color:var(--lichen)}
+.maxgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px}
+.maxcell{border:1.5px solid var(--hair);padding:11px 13px;background:var(--concrete-2)}
+.maxcell.derived{border-style:dashed}
+.maxcell .k{font-size:13px;color:var(--ink-soft)}
+.maxcell .v{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:28px;font-variant-numeric:tabular-nums}
+.maxcell .v.none{color:var(--ink-soft);font-weight:400;font-size:19px}
+.maxcell .s{font-size:12.5px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+/* schema */
+.week{display:grid;gap:0;border-top:1.5px solid var(--ink);margin-bottom:18px}
+.day{display:grid;grid-template-columns:52px 1fr;gap:14px;align-items:start;
+  padding:12px 0;border-bottom:1px solid var(--hair)}
+.day.today{background:var(--concrete-2);box-shadow:-14px 0 0 var(--concrete-2),14px 0 0 var(--concrete-2)}
+.day .d{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:600;font-size:15px;padding-top:2px}
+.day.today .d{color:var(--ultra)}
+.slots{display:flex;flex-direction:column;gap:9px}
+.slot{display:grid;grid-template-columns:50px 1fr auto;gap:12px;align-items:center}
+.slot .t{font-size:13.5px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.slot .what{font-size:15px}
+.slot .what small{display:block;color:var(--ink-soft);font-size:13.5px}
+.day.off .what{color:var(--ink-soft)}
+@media(max-width:560px){
+  .stage{grid-template-columns:1fr 66px;gap:14px;padding:14px}
+  .wrap{padding:14px 14px 40px}
+  nav{overflow-x:auto}
+  .day{grid-template-columns:40px 1fr;gap:10px}
+  .slot{grid-template-columns:46px 1fr;row-gap:6px}
+  .slot .btn{grid-column:2;justify-self:start}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="bar">
+  <div class="mark">abra<span>hangs</span></div>
+  <div class="status"><span class="dot" id="dot"></span><span id="devtext">Ingen enhet</span></div>
+  <button class="btn" id="btnConnect">Anslut</button>
+  <button class="btn ghost" id="btnTare" disabled>Nolla</button>
+</div>
+
+<nav role="tablist">
+  <button role="tab" aria-selected="true" data-view="schema">Vecka</button>
+  <button role="tab" aria-selected="false" data-view="pass">Pass</button>
+  <button role="tab" aria-selected="false" data-view="max">Maxtest</button>
+  <button role="tab" aria-selected="false" data-view="logg">Logg</button>
+  <button role="tab" aria-selected="false" data-view="om">Underlag</button>
+</nav>
+
+<!-- ============ VECKA ============ -->
+<section class="view on" id="v-schema">
+  <div class="row">
+    <div style="flex:1;min-width:180px"><label for="fPhase">Fas</label>
+      <select id="fPhase">
+        <option value="rehab">Återgång efter ringbandsskada</option>
+        <option value="full">Full träning</option>
+      </select></div>
+    <div style="flex:1;min-width:180px"><label for="fInjured">Skadad hand</label>
+      <select id="fInjured">
+        <option value="">Ingen</option>
+        <option value="L">Vänster</option>
+        <option value="R">Höger</option>
+      </select></div>
+  </div>
+  <div class="row">
+    <div style="flex:1;min-width:180px"><label for="fPerDay">Abrahangs per dag</label>
+      <select id="fPerDay"><option value="1">Ett pass</option><option value="2">Två pass</option></select></div>
+    <div style="width:120px"><label for="fAm">Morgon</label><input type="time" id="fAm" value="07:00"></div>
+    <div style="width:120px"><label for="fPm">Kväll</label><input type="time" id="fPm" value="19:00"></div>
+  </div>
+
+  <div class="week" id="week"></div>
+  <div class="note" id="phaseNote"></div>
+
+  <h2>Redo för tungt?</h2>
+  <div class="note" id="readiness"></div>
+</section>
+
+<!-- ============ PASS ============ -->
+<section class="view" id="v-pass">
+  <div class="stage">
+    <div class="readout">
+      <div class="phase" id="phase">Redo</div>
+      <div class="clock" id="clock">--</div>
+      <div class="force" id="force">0.0<small>kg</small></div>
+      <div class="target-line" id="tline">Mål: <b>—</b></div>
+    </div>
+    <div class="meter" id="meter">
+      <div class="band" id="band"></div>
+      <div class="fill" id="fill"></div>
+    </div>
+  </div>
+
+  <div class="reps" id="reps"></div>
+
+  <div class="row">
+    <button class="btn primary big" id="btnStart">Starta pass</button>
+    <button class="btn big" id="btnStop" disabled>Avbryt</button>
+    <button class="btn ghost" id="btnSkip" disabled>Nästa</button>
+  </div>
+
+  <h2>Program</h2>
+  <div class="grid">
+    <div><label for="fProg">Upplägg</label>
+      <select id="fProg">
+        <option value="rehab">Abrahangs, återgång</option>
+        <option value="study">Abrahangs, studieversion</option>
+        <option value="emil">Abrahangs, Emils original</option>
+        <option value="maxhang">Max hangs</option>
+        <option value="custom">Eget</option>
+      </select></div>
+    <div><label for="fEdge">List</label>
+      <select id="fEdge"><option value="20">20 mm</option><option value="10">10 mm</option></select></div>
+    <div><label for="fHands">Händer</label>
+      <select id="fHands"><option value="alt">Växelvis V/H</option><option value="L">Bara vänster</option><option value="R">Bara höger</option></select></div>
+    <div><label for="fPct">Intensitet (% av max)</label><input type="number" id="fPct" value="32" min="10" max="98"></div>
+    <div><label for="fWork">Håll (s)</label><input type="number" id="fWork" value="10" min="3" max="60"></div>
+    <div><label for="fRest">Vila mellan rep (s)</label><input type="number" id="fRest" value="20" min="5" max="300"></div>
+    <div><label for="fTol">Målzon ±%</label><input type="number" id="fTol" value="12" min="3" max="40"></div>
+    <div id="wrapReps" style="display:none"><label for="fReps">Rep per hand</label><input type="number" id="fReps" value="10" min="1" max="30"></div>
+  </div>
+  <div class="note" id="planInfo"></div>
+  <div id="planTable"></div>
+</section>
+
+<!-- ============ MAXTEST ============ -->
+<section class="view" id="v-max">
+  <h2>Maxtest, en hand</h2>
+  <p class="lede">Sju sekunders håll i halvcrimp, som i studiens styrketest. Bygg upp kraften under första sekunden och håll den så jämnt du kan. Det som sparas är medelkraften från 1,5 sekunder och framåt — inte toppen, eftersom en topp du håller i en halv sekund inte säger något om vad du klarar i tio.</p>
+
+  <div class="stage">
+    <div class="readout">
+      <div class="phase" id="mphase">Redo</div>
+      <div class="clock" id="mclock">--</div>
+      <div class="force" id="mforce">0.0<small>kg</small></div>
+      <div class="target-line">Snitt: <b id="mmean">—</b> · topp <span id="mpeak">—</span></div>
+    </div>
+    <div class="meter" id="mmeter">
+      <div class="peakline show" id="mpeakline"></div>
+      <div class="fill" id="mfill"></div>
+    </div>
+  </div>
+
+  <div class="row">
+    <select id="mEdge" style="width:auto"><option value="20">20 mm</option><option value="10">10 mm</option></select>
+    <select id="mHand" style="width:auto"><option value="L">Vänster</option><option value="R">Höger</option></select>
+    <input type="number" id="mDur" value="7" min="5" max="12" style="width:74px" aria-label="Sekunder">
+    <input type="number" id="fBw" value="75" min="30" max="150" style="width:88px" aria-label="Kroppsvikt kg">
+    <button class="btn primary" id="btnMax">Starta test</button>
+    <button class="btn ghost" id="btnSaveMax" disabled>Spara som max</button>
+  </div>
+  <div class="note" id="maxNote"></div>
+  <div class="maxgrid" id="maxgrid"></div>
+</section>
+
+<!-- ============ LOGG ============ -->
+<section class="view" id="v-logg">
+  <h2>Logg</h2>
+  <p class="lede">Varje avslutat håll hamnar här. Ligger bara i minnet så länge fliken är öppen — ladda ner CSV om du vill spara den.</p>
+  <div class="row">
+    <button class="btn" id="btnCsv">Ladda ner CSV</button>
+    <button class="btn ghost" id="btnClear">Rensa loggen</button>
+  </div>
+  <div id="logwrap"><div class="empty">Inget loggat än.</div></div>
+</section>
+
+<!-- ============ UNDERLAG ============ -->
+<section class="view" id="v-om">
+  <h2>Vad studien faktiskt gjorde</h2>
+  <p class="lede">Gilmore, Klimek, Abrahamsson och Baar, Sports Medicine – Open 2024. Retrospektiv genomgång av 526 klättrare som loggat träning i Crimpd och gjort två styrketester inom fyra till sexton veckor.</p>
+  <p class="lede">Abrahangs: 18–22 mm list, fötterna i golvet, tio sekunders håll med tjugo sekunders vila, tjugo rep över sex grepp. Instruktionen var att bara känna en liten spänning i underarmen, beskrivet som ungefär fyrtio procent av max. Minst sex timmar mellan pass. Max hangs: 20 mm, sex rep om tio sekunder på 85–95 procent av 1RM, två minuters vila. Styrketestet definierade 1RM som den vikt man klarade att hålla i sju sekunder.</p>
+
+  <h2>Resultatet</h2>
+  <p class="lede">Bara klättring gav ingen förändring. Abrahangs ensamt 2,5 procent i snitt, men inte statistiskt signifikant mot kontrollgruppen. Max hangs ensamt 3,2 procent, signifikant. Båda tillsammans 5,8 procent, signifikant bättre än vardera för sig. Effektstorlekar 0,29, 0,45 och 0,79.</p>
+
+  <h2>Vad man inte vet</h2>
+  <p class="lede">Ingen randomisering, självvalda program, ingen kontroll av annan träning. Framför allt mättes aldrig belastningen i Abrahangs-gruppen — författarna skriver att de som fick effekt kan ha dragit hårdare än de andra. Det är luckan en Progressor täpper till.</p>
+  <p class="lede">Studien säger heller ingenting om skadade fingrar. Ingen av deltagarna följdes upp för skador, och rehabupplägget i den här appen bygger på allmänna principer för belastningsprogression, inte på data. Det ersätter inte en fysioterapeut som får titta på fingret.</p>
+
+  <h2>Om tio millimeter</h2>
+  <p class="lede">Varken studien eller Emils original gick under 18 mm för submaximalt arbete. Samma kraft på 10 mm ger högre tryck per area mot senskidorna. 20 mm är det som testats.</p>
+
+  <h2>Så räknas målen</h2>
+  <p class="lede">Procenten utgår från din uppmätta hållkraft i halvcrimp på vald list. För grepp med färre fingrar sänks målet enligt Emils egna ansträngningsnivåer: tre fingrar drag på samma nivå som fyra, två fingrar öppet på runt sjuttio procent, tvåfingerscrimp på runt fyrtiofem. Faktorerna är en översättning, inte något som mätts.</p>
+
+  <h2>Teknik</h2>
+  <p class="lede">Web Bluetooth mot tjänst 7e4e1701-…, notifieringar på 1702, kommandon på 1703. Nolla 0x64, starta 0x65, stoppa 0x66. Kraft som little-endian float32 i kilo med tidsstämpel i mikrosekunder. Chrome och Edge på dator och Android; iOS kräver Bluefy.</p>
+  <div class="note warn" id="btNote"></div>
+</section>
+
+</div>
+
+<script>
+"use strict";
+/* ===================== Bluetooth ===================== */
+const SVC="7e4e1701-1ea6-40c9-9dcc-13d34ffead57";
+const CDATA="7e4e1702-1ea6-40c9-9dcc-13d34ffead57";
+const CCTRL="7e4e1703-1ea6-40c9-9dcc-13d34ffead57";
+const CMD={TARE:0x64,START:0x65,STOP:0x66,BATTERY:0x6f};
+const bt={dev:null,ctrl:null,data:null,connected:false,streaming:false,lastKind:null,batt:null};
+let force=0, demoMode=false;
+const listeners=[];
+function onSample(kg){ force=kg; listeners.forEach(f=>f(kg)); }
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const $=id=>document.getElementById(id);
+
+async function connect(){
+  if(!navigator.bluetooth){ startDemo(); return; }
+  try{
+    bt.dev=await navigator.bluetooth.requestDevice({
+      filters:[{services:[SVC]},{namePrefix:"Progressor"}], optionalServices:[SVC]});
+    bt.dev.addEventListener("gattserverdisconnected",onDisconnect);
+    const server=await bt.dev.gatt.connect();
+    const svc=await server.getPrimaryService(SVC);
+    bt.data=await svc.getCharacteristic(CDATA);
+    bt.ctrl=await svc.getCharacteristic(CCTRL);
+    await bt.data.startNotifications();
+    bt.data.addEventListener("characteristicvaluechanged",handleNotify);
+    bt.connected=true;
+    setStatus(true,bt.dev.name||"Progressor");
+    await send(CMD.BATTERY,"battery"); await sleep(150);
+    await send(CMD.TARE); await sleep(150);
+    await startStream();
+  }catch(err){
+    if(err&&err.name==="NotFoundError") return;
+    setStatus(false,"Anslutning misslyckades"); console.error(err);
+  }
+}
+function onDisconnect(){
+  bt.connected=false; bt.streaming=false; setStatus(false,"Frånkopplad");
+  if(session.running) stopSession(false);
+}
+const q=[]; let busy=false;
+function send(op,tag){ return new Promise((res,rej)=>{ q.push({op,tag,res,rej}); pump(); }); }
+async function pump(){
+  if(busy||!q.length||!bt.ctrl) return;
+  busy=true; const job=q.shift();
+  try{ bt.lastKind=job.tag||null; await bt.ctrl.writeValue(new Uint8Array([job.op])); job.res(); }
+  catch(e){ job.rej(e); }
+  await sleep(120); busy=false; pump();
+}
+function handleNotify(ev){
+  const dv=ev.target.value; if(dv.byteLength<2) return;
+  const kind=dv.getUint8(0), len=dv.getUint8(1);
+  if(kind===0x01){
+    for(let o=2;o+8<=2+len&&o+8<=dv.byteLength;o+=8) onSample(dv.getFloat32(o,true));
+  }else if(kind===0x00){
+    if(bt.lastKind==="battery"&&len>=4){
+      const raw=dv.getUint32(2,true);
+      bt.batt=raw>10000?raw/1000:raw;
+      setStatus(true,(bt.dev&&bt.dev.name)||"Progressor");
+    }
+    bt.lastKind=null;
+  }
+}
+async function startStream(){ if(bt.connected&&!bt.streaming){ await send(CMD.START); bt.streaming=true; } }
+async function tare(){ if(bt.connected) await send(CMD.TARE); }
+
+let demoHold=false, demoVal=0;
+function startDemo(){
+  demoMode=true;
+  setStatus(true,"Demoläge — håll musknappen eller mellanslag");
+  addEventListener("pointerdown",()=>demoHold=true);
+  addEventListener("pointerup",()=>demoHold=false);
+  addEventListener("keydown",e=>{ if(e.code==="Space"){demoHold=true;e.preventDefault();} });
+  addEventListener("keyup",e=>{ if(e.code==="Space") demoHold=false; });
+  setInterval(()=>{
+    const goal=demoHold?18+Math.sin(Date.now()/400)*1.8:0;
+    demoVal+=(goal-demoVal)*0.22;
+    onSample(Math.max(0,demoVal+(demoHold?(Math.random()-.5)*0.5:0)));
+  },40);
+}
+function setStatus(ok,text){
+  $("dot").classList.toggle("on",!!ok);
+  let t=text; if(ok&&bt.batt) t+=" · "+bt.batt.toFixed(0)+" mV";
+  $("devtext").textContent=t;
+  $("btnTare").disabled=!bt.connected;
+}
+
+/* ===================== Ljud ===================== */
+let ac=null;
+function beep(freq=880,ms=110,vol=.22){
+  try{
+    ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+    if(ac.state==="suspended") ac.resume();
+    const o=ac.createOscillator(), g=ac.createGain();
+    o.frequency.value=freq; o.type="square";
+    g.gain.setValueAtTime(vol,ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+ms/1000);
+    o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime+ms/1000);
+  }catch(e){}
+}
+
+/* ===================== Grepp, program, schema ===================== */
+const GRIPS={
+  hc :{label:"Halvcrimp, fyra fingrar", mult:1.00},
+  d3 :{label:"Tre fingrar, drag",        mult:1.00},
+  f2o:{label:"Främre två, öppet",        mult:0.70},
+  m2o:{label:"Mellersta två, öppet",     mult:0.70},
+  f2c:{label:"Främre två, halvcrimp",    mult:0.45},
+  m2c:{label:"Mellersta två, halvcrimp", mult:0.45}
+};
+const PRESETS={
+  rehab:{pct:32,work:10,rest:20,blocks:[["hc",3],["d3",3]],
+    text:"Bara halvcrimp och tre fingrar drag. Tvåfingersgreppen är borttagna eftersom de koncentrerar belastningen på enskilda ringband. Lägre intensitet än studien, tolv rep, runt sex minuter."},
+  study:{pct:40,work:10,rest:20,blocks:[["hc",3],["d3",3],["f2o",1],["m2o",1],["f2c",1],["m2c",1]],
+    text:"Studiens greppsekvens, halverad per hand så att en växelvis runda landar på tjugo rep och runt tio minuter."},
+  emil:{pct:40,work:10,rest:50,blocks:[["hc",3],["d3",3],["f2o",1],["m2o",1],["f2c",1],["m2c",1]],
+    text:"Emils originalvila på femtio sekunder. Passet blir runt tjugo minuter."},
+  maxhang:{pct:85,work:10,rest:120,blocks:[["hc",6]],
+    text:"Sex rep om tio sekunder på 85–95 procent av uppmätt hållkraft, två minuters vila. Den här delen drev störst enskild effekt i studien."},
+  custom:{pct:40,work:10,rest:30,blocks:null,text:"Fritt upplägg med bara halvcrimp."}
+};
+const DAYS=[
+  {d:"Mån",type:"boulder"},{d:"Tis",type:"abra"},{d:"Ons",type:"boulder"},
+  {d:"Tor",type:"abra"},{d:"Fre",type:"abra"},
+  {d:"Lör",type:"abra",sub:"Hoppa över om du klättrar ute"},{d:"Sön",type:"rest"}
+];
+function hhmm(v){ const [h,m]=(v||"0:0").split(":").map(Number); return h+m/60; }
+function gapHours(){
+  const g=hhmm($("fPm").value)-hhmm($("fAm").value);
+  return g>0?g:g+24;
+}
+function buildDay(day){
+  const twice=$("fPerDay").value==="2";
+  const abra=phase()==="rehab"?"rehab":"study";
+  const abraName=phase()==="rehab"?"Abrahangs, återgång":"Abrahangs";
+  const am=$("fAm").value, pm=$("fPm").value;
+  if(day.type==="rest") return [{time:"",what:"Vila",sub:"",prog:null}];
+  if(day.type==="boulder"){
+    const out=[];
+    if(twice) out.push({time:am,what:abraName,sub:"Före klättringen, inte efter",prog:abra});
+    out.push(phase()==="full"
+      ? {time:pm,what:"Max hangs, sedan bouldring",sub:"Efter uppvärmning, före de hårda försöken",prog:"maxhang"}
+      : {time:pm,what:"Bouldring",sub:"Ingen fingerträning före, ingen full crimp",prog:null});
+    return out;
+  }
+  const out=[];
+  if(twice) out.push({time:am,what:abraName,sub:"",prog:abra});
+  out.push({time:pm,what:abraName,sub:day.sub||"",prog:abra});
+  return out;
+}
+const PHASE_NOTE={
+  rehab:"Tung fingerträning är borttagen ur veckan. Ringband fortsätter remodelleras i månader efter att smärtan försvunnit, och 85–95 procent av max är precis den belastning som gör återfall vanliga. Klättringen ligger kvar på måndag och onsdag så att fingrarna får två fria dagar mellan de hårda dagarna.",
+  full:"Tungt och klättring på samma dagar, Abrahangs däremellan. Minst sex timmar mellan två pass. Var fjärde vecka: hoppa max hangs helt och behåll Abrahangs."
+};
+
+function phase(){ return $("fPhase").value; }
+function injured(){ return $("fInjured").value; }
+function preset(){ return PRESETS[$("fProg").value]; }
+
+function renderWeek(){
+  const today=(new Date().getDay()+6)%7;   // 0 = måndag
+  const el=$("week"); el.innerHTML="";
+  DAYS.forEach((day,i)=>{
+    const slots=buildDay(day);
+    const row=document.createElement("div");
+    row.className="day"+(i===today?" today":"")+(slots.some(s=>s.prog)?"":" off");
+    const wrap=document.createElement("div"); wrap.className="slots";
+    slots.forEach(s=>{
+      const sl=document.createElement("div"); sl.className="slot";
+      sl.innerHTML=`<div class="t">${s.time||""}</div>
+        <div class="what">${s.what}${s.sub?`<small>${s.sub}</small>`:""}</div>`;
+      if(s.prog){
+        const b=document.createElement("button");
+        b.className="btn"+(i===today?" primary":" ghost");
+        b.textContent="Öppna";
+        b.onclick=()=>{ $("fProg").value=s.prog; syncPreset(); showView("pass"); };
+        sl.appendChild(b);
+      }
+      wrap.appendChild(sl);
+    });
+    row.innerHTML=`<div class="d">${day.d}</div>`;
+    row.appendChild(wrap);
+    el.appendChild(row);
+  });
+
+  const twice=$("fPerDay").value==="2";
+  const g=gapHours();
+  let note=PHASE_NOTE[phase()];
+  if(twice){
+    note+=" ";
+    note+=g<6
+      ? `Just nu ligger passen ${g.toFixed(1)} timmar isär. Bindväven blir refraktär i ungefär sex timmar efter belastning, så det andra passet ger sannolikt inget extra stimulus — bara mer volym. Flytta isär dem.`
+      : `${g.toFixed(0)} timmar mellan passen, vilket räcker för att det andra ska räknas som ett nytt stimulus.`;
+    if(phase()==="rehab")
+      note+=" Med ett ringband på väg tillbaka: stanna på ett pass om dagen i två till tre veckor först, lägg sedan till det andra på en enda dag i veckan innan du gör det överallt.";
+  }
+  $("phaseNote").textContent=note;
+  renderReadiness();
+}
+
+function renderReadiness(){
+  const box=$("readiness");
+  const inj=injured();
+  if(!inj){
+    box.className="note";
+    box.innerHTML="Ingen skadad hand vald. Välj den ovan om du kommer tillbaka från en skada, så anpassas maxtest och program.";
+    return;
+  }
+  const healthy=inj==="L"?"R":"L";
+  const a=maxes[20][inj], b=maxes[20][healthy];
+  if(!b){
+    box.className="note warn";
+    box.innerHTML=`Testa den <b>${healthy==="L"?"vänstra":"högra"}</b> handen först. Målen för den skadade sidan härleds från den siffran tills du kan testa båda.`;
+    return;
+  }
+  if(!a){
+    box.className="note warn";
+    box.innerHTML="Maxtesta inte den skadade handen än — ett maximalt drag är i sig belastningen du försöker undvika. Kör återgångsprogrammet några veckor först, och testa när tio sekunders håll på 32 procent känns odramatiskt och du inte är öm dagen efter.";
+    return;
+  }
+  const diff=(b-a)/b*100;
+  if(diff<=10){
+    box.className="note ok";
+    box.innerHTML=`Skillnad mellan händerna: <b>${diff.toFixed(0)} procent</b>. Under tio är en rimlig tumregel för att börja bygga upp tungt igen — men gör det gradvis, 60 sedan 70 sedan 80 procent över några veckor, inte direkt på 85. Byt fas här ovanför när du bestämt dig, gärna efter att en fysio sett fingret.`;
+  }else{
+    box.className="note warn";
+    box.innerHTML=`Skillnad mellan händerna: <b>${diff.toFixed(0)} procent</b>. Över tio talar för att fortsätta på återgångsprogrammet. Tumregeln är grov och ersätter inte en bedömning av fingret.`;
+  }
+}
+function showView(v){
+  document.querySelectorAll("nav button").forEach(x=>x.setAttribute("aria-selected",x.dataset.view===v));
+  document.querySelectorAll(".view").forEach(s=>s.classList.remove("on"));
+  $("v-"+v).classList.add("on");
+}
+
+/* ===================== Planbygge ===================== */
+function refMax(edge,hand){
+  const m=maxes[edge][hand];
+  if(m) return {v:m,derived:false};
+  const inj=injured();
+  if(inj&&hand===inj){
+    const other=maxes[edge][inj==="L"?"R":"L"];
+    if(other) return {v:other,derived:true};
+  }
+  return null;
+}
+function targetFor(edge,hand,grip,pct){
+  const r=refMax(edge,hand);
+  return r?r.v*(pct/100)*GRIPS[grip].mult:null;
+}
+function buildPlan(){
+  const p=preset();
+  const edge=$("fEdge").value, hands=$("fHands").value;
+  const work=+$("fWork").value, rest=+$("fRest").value, pct=+$("fPct").value;
+  const blocks=p.blocks||[["hc",+$("fReps").value]];
+  const handList=hands==="alt"?["L","R"]:[hands];
+  const plan=[];
+  for(const [g,n] of blocks)
+    for(let i=0;i<n;i++)
+      for(const h of handList)
+        plan.push({grip:g,hand:h,edge,work,rest,target:targetFor(edge,h,g,pct)});
+  return plan;
+}
+function syncPreset(){
+  const p=preset();
+  $("fPct").value=p.pct; $("fWork").value=p.work; $("fRest").value=p.rest;
+  $("wrapReps").style.display=p.blocks?"none":"";
+  refresh();
+}
+function refresh(){ renderPlanInfo(); renderPlanTable(); renderReps(); }
+
+function renderPlanInfo(){
+  const box=$("planInfo");
+  const edge=$("fEdge").value, hands=$("fHands").value;
+  const need=hands==="alt"?["L","R"]:[hands];
+  const miss=need.filter(h=>!refMax(edge,h));
+  if(miss.length){
+    box.className="note warn";
+    box.innerHTML=`Saknar referensvärde för <b>${miss.map(h=>h==="L"?"vänster":"höger").join(" och ")}</b> på ${edge} mm. Kör ett maxtest först — utan mätt kraft blir procenten en gissning, och det var studiens största svaghet.`;
+    return;
+  }
+  if(phase()==="rehab"&&$("fProg").value==="maxhang"){
+    box.className="note warn";
+    box.innerHTML="Max hangs ligger utanför återgångsfasen. Vill du ändå köra: sänk intensiteten rejält och betrakta det som ett test, inte som träning.";
+    return;
+  }
+  const plan=buildPlan();
+  const derived=need.some(h=>{const r=refMax(edge,h);return r&&r.derived;});
+  const work=plan.length*plan[0].work;
+  const total=plan.reduce((a,r)=>a+r.work+r.rest,0);
+  box.className="note";
+  box.innerHTML=preset().text+
+    (edge==="10"?"<br><br><b>10 mm ligger utanför underlaget</b> — varken studien eller Emils original gick under 18 mm för submaximalt arbete.":"")+
+    (derived?"<br><br>Målet för den skadade handen är härlett från den friska. Det underskattar troligen kapaciteten något, vilket är rätt håll att fela åt.":"")+
+    `<br><br>${plan.length} rep · ${work} sekunder under belastning · ${Math.round(total/60)} minuter totalt.`;
+}
+function renderPlanTable(){
+  const p=preset(), edge=$("fEdge").value, pct=+$("fPct").value;
+  const blocks=p.blocks||[["hc",+$("fReps").value]];
+  const hands=$("fHands").value;
+  const hl=hands==="alt"?["L","R"]:[hands];
+  const rows=blocks.map(([g,n])=>{
+    const t=hl.map(h=>{const v=targetFor(edge,h,g,pct);return v?v.toFixed(1):"—";}).join(" / ");
+    return `<tr><td class="g">${GRIPS[g].label}</td><td>${n} × ${hl.length}</td>
+      <td>${Math.round(pct*GRIPS[g].mult)} %</td><td>${t} kg</td></tr>`;
+  }).join("");
+  $("planTable").innerHTML=`<table><thead><tr><th>Grepp</th><th>Rep</th><th>Andel av max</th>
+    <th>Mål ${hl.length>1?"V / H":""}</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+$("fProg").addEventListener("change",syncPreset);
+["fEdge","fHands","fPct","fWork","fRest","fTol","fReps"].forEach(id=>$(id).addEventListener("input",refresh));
+$("fPhase").addEventListener("change",()=>{
+  $("fProg").value=phase()==="rehab"?"rehab":"study"; syncPreset(); renderWeek();
+});
+$("fInjured").addEventListener("change",()=>{ renderWeek(); renderMax(); });
+["fPerDay","fAm","fPm"].forEach(id=>$(id).addEventListener("input",renderWeek));
+
+/* ===================== Maxtest ===================== */
+const maxes={10:{L:null,R:null},20:{L:null,R:null}};
+function renderMax(){
+  const g=$("maxgrid"); g.innerHTML="";
+  const bw=+$("fBw").value||0;
+  for(const edge of [20,10]) for(const h of ["L","R"]){
+    const r=refMax(String(edge),h);
+    const own=maxes[edge][h];
+    const d=document.createElement("div");
+    d.className="maxcell"+(r&&r.derived?" derived":"");
+    const val=own?own.toFixed(1)+" kg":(r&&r.derived?r.v.toFixed(1)+" kg":"inte testad");
+    d.innerHTML=`<div class="k">${edge} mm · ${h==="L"?"vänster":"höger"}${h===injured()?" · skadad":""}</div>
+      <div class="v ${own?"":"none"}">${val}</div>
+      <div class="s">${own&&bw?Math.round(own/bw*100)+" % av kroppsvikten":(r&&r.derived?"härlett från frisk hand":"")}</div>`;
+    g.appendChild(d);
+  }
+  const inj=injured();
+  const note=$("maxNote");
+  if(inj&&!maxes[20][inj]){
+    note.className="note warn";
+    note.innerHTML=`Maxtesta inte <b>${inj==="L"?"vänster":"höger"}</b> hand än. Testa den friska sidan, så används den siffran som referens för båda.`;
+  }else{
+    note.className="note";
+    note.innerHTML="Grovt riktmärke för enhands halvcrimp på 20 mm: runt 50 procent av kroppsvikten är hyfsat, 60 och uppåt starkt. Spridningen är stor — kurvan över månader säger mer än en enskild siffra.";
+  }
+  refresh(); renderReadiness();
+}
+function paint(fillEl,kg,scale,cls){
+  fillEl.style.height=(Math.max(0,Math.min(1,kg/scale))*100)+"%";
+  fillEl.className="fill"+(cls?" "+cls:"");
+}
+const mt={running:false,peak:0,t0:0,dur:7,raf:0,samples:[],mean:0};
+$("btnMax").onclick=()=>{
+  if(mt.running) return;
+  if(!bt.connected&&!demoMode){ connect(); return; }
+  const inj=injured(), h=$("mHand").value;
+  if(inj&&h===inj&&!maxes[20][inj]&&!confirm("Du har markerat den här handen som skadad. Ett maximalt håll är den belastning du försöker undvika. Vill du testa ändå?")) return;
+  mt.dur=+$("mDur").value||7; mt.peak=0; mt.samples=[]; mt.mean=0; mt.running=true;
+  $("btnSaveMax").disabled=true;
+  let n=3; $("mphase").textContent="Gör dig redo";
+  const cd=setInterval(()=>{
+    $("mclock").textContent=n; beep(660,90);
+    if(n--===0){ clearInterval(cd); beep(1100,260); mt.t0=performance.now();
+      $("mphase").textContent="Bygg upp och håll"; loopMax(); }
+  },1000);
+};
+function loopMax(){
+  const el=(performance.now()-mt.t0)/1000;
+  const left=Math.max(0,mt.dur-el);
+  $("mclock").textContent=left.toFixed(1);
+  if(force>mt.peak) mt.peak=force;
+  if(el>=1.5) mt.samples.push(force);
+  const scale=Math.max(10,mt.peak*1.2,force*1.2);
+  paint($("mfill"),force,scale,el>=1.5?"inzone":"");
+  $("mpeakline").style.bottom=Math.min(99,(mt.peak/scale)*100)+"%";
+  $("mforce").innerHTML=force.toFixed(1)+"<small>kg</small>";
+  mt.mean=mt.samples.length?mt.samples.reduce((a,b)=>a+b,0)/mt.samples.length:0;
+  $("mmean").textContent=mt.mean?mt.mean.toFixed(1)+" kg":"—";
+  $("mpeak").textContent=mt.peak.toFixed(1)+" kg";
+  if(left>0){ mt.raf=requestAnimationFrame(loopMax); }
+  else{ mt.running=false; beep(440,300);
+    $("mphase").textContent="Klart"; $("mclock").textContent="--";
+    $("btnSaveMax").disabled=mt.mean<=0; }
+}
+$("btnSaveMax").onclick=()=>{
+  const e=$("mEdge").value,h=$("mHand").value;
+  maxes[e][h]=mt.mean;
+  log.push({tid:new Date().toISOString(),typ:"maxtest",grepp:"hc",list:e,hand:h,
+    mal:"",topp:mt.peak,snitt:mt.mean,izon:"",sek:mt.dur});
+  renderMax(); renderLog(); $("btnSaveMax").disabled=true;
+};
+$("fBw").addEventListener("input",renderMax);
+
+/* ===================== Passet ===================== */
+const session={running:false,plan:[],i:0,phase:"idle",t0:0,dur:0,raf:0,
+  samples:[],inZone:0,total:0,peak:0};
+function renderReps(){
+  const el=$("reps");
+  const plan=session.running?session.plan:buildPlan();
+  el.innerHTML="";
+  plan.forEach((p,i)=>{
+    const d=document.createElement("div");
+    d.className="rep "+p.hand+(session.running&&i<session.i?" done":"")+
+      (session.running&&i===session.i?" now":"");
+    d.title=GRIPS[p.grip].label;
+    el.appendChild(d);
+  });
+}
+let wakeLock=null;
+async function keepAwake(on){
+  try{
+    if(on&&"wakeLock" in navigator) wakeLock=await navigator.wakeLock.request("screen");
+    else if(wakeLock){ wakeLock.release(); wakeLock=null; }
+  }catch(e){}
+}
+$("btnStart").onclick=async()=>{
+  if(!bt.connected&&!demoMode){ await connect(); if(!bt.connected&&!demoMode) return; }
+  const plan=buildPlan();
+  if(plan.some(p=>!p.target)){ refresh(); $("planInfo").scrollIntoView({block:"center"}); return; }
+  session.plan=plan; session.i=0; session.running=true;
+  beep(880,80);
+  $("btnStart").disabled=true; $("btnStop").disabled=false; $("btnSkip").disabled=false;
+  keepAwake(true); await startStream(); await tare();
+  enterPhase("prep",5); renderReps(); loopSession();
+};
+$("btnStop").onclick=()=>stopSession(false);
+$("btnSkip").onclick=()=>{ if(session.running){ session.phase==="work"?finishRep():nextRep(); } };
+function enterPhase(p,secs){
+  session.phase=p; session.t0=performance.now(); session.dur=secs;
+  if(p==="work"){ session.samples=[]; session.inZone=0; session.total=0; session.peak=0; }
+}
+function currentRep(){ return session.plan[session.i]; }
+function loopSession(){
+  if(!session.running) return;
+  const rep=currentRep();
+  const left=Math.max(0,session.dur-(performance.now()-session.t0)/1000);
+  const clock=$("clock"), phaseEl=$("phase");
+  const tol=(+$("fTol").value)/100;
+  const scale=rep&&rep.target?Math.max(rep.target*2.2,force*1.15,6):Math.max(force*1.2,10);
+  if(rep&&rep.target){
+    const lo=rep.target*(1-tol), hi=rep.target*(1+tol);
+    const band=$("band"); band.classList.add("show");
+    band.style.bottom=(lo/scale*100)+"%";
+    band.style.height=((hi-lo)/scale*100)+"%";
+    $("tline").innerHTML=`Mål: <b>${rep.target.toFixed(1)} kg</b> · ${lo.toFixed(1)}–${hi.toFixed(1)} · ${rep.edge} mm`;
+  }
+  let cls="";
+  if(session.phase==="work"&&rep){
+    const lo=rep.target*(1-tol), hi=rep.target*(1+tol);
+    cls=force>hi?"over":(force>=lo?"inzone":"");
+    session.total++;
+    if(force>=lo&&force<=hi) session.inZone++;
+    if(force>session.peak) session.peak=force;
+    session.samples.push(force);
+  }
+  paint($("fill"),force,scale,cls);
+  $("force").innerHTML=force.toFixed(1)+"<small>kg</small>";
+  const hand=rep?(rep.hand==="L"?"vänster":"höger"):"";
+  if(session.phase==="prep"){
+    phaseEl.textContent=GRIPS[rep.grip].label+" · "+hand;
+    clock.textContent=Math.ceil(left); clock.className="clock";
+    if(left<=0){ beep(1100,260); enterPhase("work",rep.work); } else tickBeep(left);
+  }else if(session.phase==="work"){
+    phaseEl.textContent="Håll · "+GRIPS[rep.grip].label+" · "+hand;
+    clock.textContent=left.toFixed(1); clock.className="clock work";
+    if(left<=0) finishRep();
+  }else if(session.phase==="rest"){
+    const n=session.plan[session.i];
+    phaseEl.textContent=n?"Vila · nästa "+GRIPS[n.grip].label+", "+(n.hand==="L"?"vänster":"höger"):"Vila";
+    clock.textContent=Math.ceil(left); clock.className="clock rest";
+    if(left<=0){ beep(1100,200); enterPhase("prep",3); renderReps(); } else tickBeep(left);
+  }
+  session.raf=requestAnimationFrame(loopSession);
+}
+let lastTick=-1;
+function tickBeep(left){
+  const s=Math.ceil(left);
+  if(s<=3&&s!==lastTick){ lastTick=s; beep(660,80); }
+  if(s>3) lastTick=-1;
+}
+function finishRep(){
+  const rep=currentRep(); beep(440,240);
+  const avg=session.samples.length?session.samples.reduce((a,b)=>a+b,0)/session.samples.length:0;
+  const zone=session.total?session.inZone/session.total*100:0;
+  log.push({tid:new Date().toISOString(),typ:$("fProg").value,grepp:rep.grip,list:rep.edge,
+    hand:rep.hand,mal:rep.target,topp:session.peak,snitt:avg,izon:zone,sek:rep.work});
+  renderLog(); nextRep();
+}
+function nextRep(){
+  const rep=currentRep(); session.i++;
+  if(session.i>=session.plan.length){ renderReps(); stopSession(true); return; }
+  renderReps(); enterPhase("rest",rep.rest);
+}
+function stopSession(done){
+  session.running=false; cancelAnimationFrame(session.raf);
+  $("btnStart").disabled=false; $("btnStop").disabled=true; $("btnSkip").disabled=true;
+  $("phase").textContent=done?"Passet klart":"Avbrutet";
+  $("clock").textContent="--"; $("clock").className="clock";
+  $("band").classList.remove("show");
+  keepAwake(false); renderReps();
+  if(done){ beep(880,160); setTimeout(()=>beep(1180,320),180); }
+}
+
+/* ===================== Logg ===================== */
+const log=[];
+function renderLog(){
+  const w=$("logwrap");
+  if(!log.length){ w.innerHTML='<div class="empty">Inget loggat än.</div>'; return; }
+  const rows=log.slice().reverse().map(r=>`<tr>
+    <td>${new Date(r.tid).toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"})}</td>
+    <td class="g">${r.typ==="maxtest"?"Maxtest":GRIPS[r.grepp].label}</td>
+    <td>${r.list} mm</td><td>${r.hand==="L"?"V":"H"}</td>
+    <td>${r.mal?(+r.mal).toFixed(1):"—"}</td>
+    <td>${(+r.topp).toFixed(1)}</td>
+    <td>${r.snitt!==""?(+r.snitt).toFixed(1):"—"}</td>
+    <td>${r.izon!==""?Math.round(r.izon)+" %":"—"}</td></tr>`).join("");
+  w.innerHTML=`<table><thead><tr><th>Tid</th><th>Grepp</th><th>List</th><th>Hand</th>
+    <th>Mål</th><th>Topp</th><th>Snitt</th><th>I zon</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+$("btnCsv").onclick=()=>{
+  const head="tid,program,grepp,list_mm,hand,mal_kg,topp_kg,snitt_kg,i_zon_pct,sekunder\n";
+  const body=log.map(r=>[r.tid,r.typ,r.grepp,r.list,r.hand,r.mal,r.topp,r.snitt,r.izon,r.sek].join(",")).join("\n");
+  const url=URL.createObjectURL(new Blob([head+body],{type:"text/csv"}));
+  const a=document.createElement("a");
+  a.href=url; a.download="fingertraning-"+new Date().toISOString().slice(0,10)+".csv";
+  a.click(); URL.revokeObjectURL(url);
+};
+$("btnClear").onclick=()=>{ log.length=0; renderLog(); };
+
+/* ===================== Start ===================== */
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
+$("btnConnect").onclick=connect;
+$("btnTare").onclick=tare;
+listeners.push(kg=>{
+  if(!session.running&&!mt.running){
+    $("force").innerHTML=kg.toFixed(1)+"<small>kg</small>";
+    $("mforce").innerHTML=kg.toFixed(1)+"<small>kg</small>";
+    const scale=Math.max(10,kg*1.3);
+    paint($("fill"),kg,scale,""); paint($("mfill"),kg,scale,"");
+  }
+});
+$("btNote").innerHTML=navigator.bluetooth
+  ? "Webbläsaren stöder Web Bluetooth. Tryck <b>Anslut</b>, slå på Progressorn och välj den i listan."
+  : "Den här webbläsaren, eller ramen sidan visas i, ger inte tillgång till Web Bluetooth. <b>Anslut</b> startar då ett demoläge där du håller musknappen eller mellanslag nedtryckt för att simulera kraft.";
+
+renderMax(); syncPreset(); renderWeek(); renderLog();
+</script>
+</body>
+</html>
