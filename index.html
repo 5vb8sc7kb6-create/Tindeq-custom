@@ -13,6 +13,9 @@
   --bg:#FFF7F0; --surface:#FFFFFF; --surface-2:#FFF0E3; --surface-3:#F3EEFF;
   --ink:#241C33; --ink-soft:#6E6584;
   --grape:#6C4DF6; --grape-2:#9B7CFF; --grape-soft:#CFC3FF;
+  /* handfärger: mörka nog att bära vit text, och skilda åt även för den
+     som inte separerar rött och grönt */
+  --hand-l:#0E86B8; --hand-r:#C2620A;
   --coral:#FF4E64; --mint:#0FBF8A; --sun:#FFC53D; --sky:#22B8F0;
   --hair:rgba(36,28,51,.11);
   --shadow:0 1px 2px rgba(36,28,51,.05),0 12px 30px -16px rgba(36,28,51,.35);
@@ -87,10 +90,25 @@ p.lede{color:var(--ink-soft);margin:0 0 16px;max-width:64ch;font-size:15px}
   background:linear-gradient(160deg,var(--surface),var(--surface-3));
   border:1px solid var(--hair);border-radius:var(--r);padding:22px;margin-bottom:18px;box-shadow:var(--shadow)}
 .readout{display:flex;flex-direction:column;justify-content:flex-end;min-height:var(--meter-h)}
-.phase{font-family:"Outfit",sans-serif;font-weight:600;font-size:15px;color:var(--grape);
-  align-self:flex-start;margin:0 auto auto 0;padding:6px 14px;border-radius:99px;
+.phaserow{display:flex;align-items:center;gap:8px;margin:0 auto auto 0;max-width:100%}
+.phase{font-family:"Outfit",sans-serif;font-weight:600;font-size:15px;color:var(--pc-ink,var(--grape));
+  padding:6px 14px;border-radius:99px;
   max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  background:rgba(108,77,246,.10);border:1px solid var(--grape-soft)}
+  background:var(--pc-bg,rgba(108,77,246,.10));border:1px solid var(--pc-soft,var(--grape-soft))}
+.count{font-size:13px;font-weight:700;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* Vilken hand det gäller ska gå att läsa av på håll och mitt i ett drag,
+   så den får egen färg, egen plats i sidled och ord — inte bara ett L. */
+.hand{display:inline-flex;align-items:baseline;gap:9px;align-self:flex-start;
+  font-family:"Outfit",sans-serif;font-weight:700;font-size:22px;letter-spacing:-.01em;line-height:1.1;
+  padding:8px 18px;border-radius:99px;margin-bottom:10px;
+  background:var(--hand-c,var(--ink-soft));color:#fff;
+  transition:background .2s,color .2s,align-self .2s}
+.hand[hidden]{display:none}
+.hand .pre{font-family:"Plus Jakarta Sans",sans-serif;font-size:11.5px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.1em;opacity:.85}
+.hand .pre:empty{display:none}
+body[data-hand="L"]{--hand-c:var(--hand-l)}
+body[data-hand="R"]{--hand-c:var(--hand-r)}
 /* Greppraden har fast höjd och bryts aldrig — annars flyttar sig klockan
    under den varje gång greppnamnet byter längd. */
 .cue{font-size:14px;font-weight:600;color:var(--ink-soft);margin-bottom:4px;
@@ -110,12 +128,14 @@ p.lede{color:var(--ink-soft);margin:0 0 16px;max-width:64ch;font-size:15px}
 /* ---------- rep chips ---------- */
 .reps{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 18px}
 .rep{width:26px;height:26px;border-radius:9px;border:1.5px solid var(--hair);background:var(--surface);
-  display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--ink-soft);transition:transform .15s,background .15s}
-.rep.done{background:linear-gradient(140deg,var(--grape-2),var(--grape));border-color:transparent;color:#fff;
-  box-shadow:0 6px 14px -8px rgba(108,77,246,.9)}
-.rep.now{border-color:var(--sun);border-width:3px;color:var(--ink);background:#FFF6DF;transform:scale(1.14);
-  box-shadow:0 0 0 4px rgba(255,197,61,.28);animation:beat 1.1s ease-in-out infinite}
-@keyframes beat{50%{box-shadow:0 0 0 9px rgba(255,197,61,.10)}}
+  display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--hc,var(--ink-soft));opacity:.75;
+  transition:transform .15s,background .15s,opacity .15s}
+.rep.L{--hc:var(--hand-l);--hc-soft:rgba(14,134,184,.30)}
+.rep.R{--hc:var(--hand-r);--hc-soft:rgba(194,98,10,.30)}
+.rep.done{background:var(--hc);border-color:transparent;color:#fff;opacity:1}
+.rep.now{border-color:var(--hc);border-width:3px;color:var(--hc);background:var(--surface);opacity:1;transform:scale(1.14);
+  box-shadow:0 0 0 4px var(--hc-soft);animation:beat 1.1s ease-in-out infinite}
+@keyframes beat{50%{box-shadow:0 0 0 9px var(--hc-soft);opacity:.85}}
 .rep.L::after{content:"L"}.rep.R::after{content:"R"}
 
 /* ---------- forms ---------- */
@@ -194,8 +214,10 @@ body:not(.run) #v-pass .readout{min-height:0;flex-direction:row;align-items:cent
 body:not(.run) #v-pass .chart,
 body:not(.run) #v-pass .clock,
 body:not(.run) #v-pass .cue,
+body:not(.run) #v-pass .hand,
+body:not(.run) #v-pass .count,
 body:not(.run) #v-pass .target-line{display:none}
-body:not(.run) #v-pass .phase{margin:0;align-self:center}
+body:not(.run) #v-pass .phaserow{margin:0;align-self:center}
 body:not(.run) #v-pass .force{font-size:30px;margin-left:auto}
 body:not(.run) #btnStop,body:not(.run) #btnSkip{display:none}   /* styr passet, hör hemma i körläget */
 /* ---------- körläge ----------
@@ -217,7 +239,26 @@ body.run .stage{flex:1;min-height:0;margin-bottom:0;grid-template-rows:1fr}
 /* i helskärm samlas siffrorna som ett block i mitten istället för att
    pillret klistras i taket och resten i golvet */
 body.run .readout{min-height:0;justify-content:center}
-body.run .phase{margin:0 auto 16px 0}
+body.run .phaserow{margin:0 auto 14px 0}
+/* Tre lägen som ska gå att skilja åt utan att läsa: gult = gör dig redo,
+   lila = dra nu, blått = vila. Färgen sitter på hela mätarkortet, inte
+   bara på pillret, så beskedet syns i ögonvrån. */
+body.run[data-phase="prep"]{--pc:var(--sun);--pc-ink:#8A5A00;--pc-bg:rgba(255,197,61,.18);--pc-soft:rgba(255,197,61,.55)}
+body.run[data-phase="work"]{--pc:var(--grape);--pc-ink:var(--grape);--pc-bg:rgba(108,77,246,.13);--pc-soft:var(--grape-soft)}
+body.run[data-phase="rest"]{--pc:var(--sky);--pc-ink:#0E7FAE;--pc-bg:rgba(34,184,240,.15);--pc-soft:rgba(34,184,240,.5)}
+body.run[data-phase] .stage{background:linear-gradient(160deg,var(--surface),var(--pc-bg));border-color:var(--pc-soft)}
+body.run .phase{font-size:clamp(19px,4.6vw,26px);font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+  padding:7px 18px}
+body.run .count{font-size:14.5px}
+/* Kortet lyser i handens färg på den sida handen sitter — sista påminnelsen
+   för den som redan glömt vilken hand det var. */
+body.run .stage{position:relative;overflow:hidden}
+body.run[data-hand] .stage::before{content:"";position:absolute;top:0;bottom:0;width:9px;background:var(--hand-c)}
+body.run[data-hand="L"] .stage::before{left:0}
+body.run[data-hand="R"] .stage::before{right:0}
+body.run[data-hand="R"] .hand{align-self:flex-end}
+/* Under vilan visas nästa hand, men ihålig — ingen ska tro att det är dags att dra */
+body.run[data-phase="rest"] .hand{background:transparent;color:var(--hand-c);box-shadow:inset 0 0 0 2.5px var(--hand-c)}
 body.run #btnConnect{display:none}
 body.run .chart{height:auto;min-height:110px}
 body.run .reps{margin:0}
@@ -309,7 +350,11 @@ body.run.done .cue{font-size:16px;color:var(--ink)}
   <div id="runzone">
     <div class="stage">
       <div class="readout">
-        <div class="phase" id="phase">Ready</div>
+        <div class="phaserow">
+          <div class="phase" id="phase">Ready</div>
+          <div class="count" id="count"></div>
+        </div>
+        <div class="hand" id="hand" hidden aria-live="polite"><span class="pre" id="handpre"></span><span id="handside"></span></div>
         <div class="cue" id="cue"></div>
         <div class="clock" id="clock">--</div>
         <div class="force" id="force">0.0<small>kg</small></div>
@@ -956,6 +1001,7 @@ $("btnStop").onclick=()=>stopSession(false);
 $("btnSkip").onclick=()=>{ if(session.running){ session.phase==="work"?finishRep():nextRep(); } };
 function enterPhase(p,secs){
   session.phase=p; session.t0=performance.now(); session.dur=secs;
+  document.body.dataset.phase=p;
   if(p==="work"){
     session.samples=[]; session.inZone=0; session.total=0; session.peak=0;
     const rep=currentRep();
@@ -975,7 +1021,7 @@ function lockNav(){
 function closeRun(){
   if(!session.finished) return;
   session.finished=false; lockNav();
-  $("phase").textContent="Ready"; $("cue").textContent="";
+  $("phase").textContent="Ready"; $("cue").textContent=""; setHand(null);
   $("clock").textContent="--"; $("clock").className="clock";
   refresh();
 }
@@ -983,6 +1029,15 @@ $("btnDone").onclick=closeRun;
 const pad2=n=>(n<10?"0":"")+n;                       // fast antal siffror, annars kryper klockan i sidled
 const padDec=s=>s.length<4?"0"+s:s;
 function currentRep(){ return session.plan[session.i]; }
+/* pre är "" när handen ska användas nu och "Next" när den bara förvarnas */
+function setHand(h,pre){
+  const el=$("hand");
+  el.hidden=!h;
+  if(!h){ delete document.body.dataset.hand; return; }
+  document.body.dataset.hand=h;
+  $("handpre").textContent=pre||"";
+  $("handside").textContent=h==="L"?"Left hand":"Right hand";
+}
 function loopSession(){
   if(!session.running) return;
   const rep=currentRep();
@@ -1011,24 +1066,24 @@ function loopSession(){
     lo,hi,target:rep?rep.target:null,
     fixed:holding&&rep&&rep.target?rep.target*2:0
   });
-  const hand=rep?(rep.hand==="L"?"left":"right"):"";
-  const count=" · "+Math.min(session.i+1,session.plan.length)+"/"+session.plan.length;
+  $("count").textContent=Math.min(session.i+1,session.plan.length)+" / "+session.plan.length;
   if(session.phase==="prep"){
-    phaseEl.textContent="Get set"+count;
-    cueEl.textContent=GRIPS[rep.grip].label+" · "+hand;
+    phaseEl.textContent="Get ready";
+    setHand(rep.hand,""); cueEl.textContent=GRIPS[rep.grip].label;
     clock.textContent=pad2(Math.ceil(left)); clock.className="clock";
-    if(left<=0){ beep(1100,260); enterPhase("work",rep.work); } else tickBeep(left);
+    if(left<=0){ beep(1320,280); enterPhase("work",rep.work); } else tickBeep(left);
   }else if(session.phase==="work"){
-    phaseEl.textContent="Hold"+count;
-    cueEl.textContent=GRIPS[rep.grip].label+" · "+hand;
+    phaseEl.textContent="Pull";
+    setHand(rep.hand,""); cueEl.textContent=GRIPS[rep.grip].label;
     clock.textContent=padDec(left.toFixed(1)); clock.className="clock work";
     if(left<=0) finishRep();
   }else if(session.phase==="rest"){
     const n=session.plan[session.i];
-    phaseEl.textContent="Rest"+count;
-    cueEl.textContent=n?"Next: "+GRIPS[n.grip].label+" · "+(n.hand==="L"?"left":"right"):"";
+    phaseEl.textContent="Rest";
+    setHand(n?n.hand:null,"Next");
+    cueEl.textContent=n?GRIPS[n.grip].label:"";
     clock.textContent=pad2(Math.ceil(left)); clock.className="clock rest";
-    if(left<=0){ beep(1100,200); enterPhase("prep",3); renderReps(); } else tickBeep(left);
+    if(left<=0){ beep(760,180); enterPhase("prep",3); renderReps(); } else tickBeep(left);
   }
   session.raf=requestAnimationFrame(loopSession);
 }
@@ -1054,6 +1109,8 @@ function nextRep(){
 }
 function stopSession(done){
   session.running=false; session.finished=!!done; cancelAnimationFrame(session.raf);
+  session.phase="idle"; delete document.body.dataset.phase; setHand(null);
+  $("count").textContent="";
   $("btnStart").disabled=false; $("btnStop").disabled=true; $("btnSkip").disabled=true;
   $("btnMax").disabled=false;
   lockNav();
