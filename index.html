@@ -312,11 +312,13 @@ td.g{font-variant-numeric:normal;font-weight:600}
 <!-- ============ LOG ============ -->
 <section class="view" id="v-logg">
   <h2>Log</h2>
-  <p class="lede">Every completed hold ends up here. It only lives in memory while the tab is open — download the CSV if you want to keep it.</p>
+  <p class="lede">Every completed hold ends up here, saved in this browser so it survives a reload. Download the CSV if you want it somewhere safer.</p>
   <div class="row">
     <button class="btn" id="btnCsv">Download CSV</button>
     <button class="btn ghost" id="btnClear">Clear log</button>
+    <button class="btn ghost" id="btnForget">Forget everything</button>
   </div>
+  <div class="note" id="storeNote"></div>
   <div id="logwrap"><div class="empty">Nothing logged yet.</div></div>
 </section>
 
@@ -732,7 +734,7 @@ $("btnSaveMax").onclick=()=>{
   maxes[e][h]=mt.mean;
   log.push({tid:new Date().toISOString(),typ:"maxtest",grepp:"hc",list:e,hand:h,
     mal:"",topp:mt.peak,snitt:mt.mean,izon:"",sek:mt.dur});
-  renderMax(); renderLog(); $("btnSaveMax").disabled=true;
+  renderMax(); renderLog(); saveStore(); $("btnSaveMax").disabled=true;
 };
 $("fBw").addEventListener("input",renderMax);
 
@@ -829,7 +831,7 @@ function finishRep(){
   const zone=session.total?session.inZone/session.total*100:0;
   log.push({tid:new Date().toISOString(),typ:$("fProg").value,grepp:rep.grip,list:rep.edge,
     hand:rep.hand,mal:rep.target,topp:session.peak,snitt:avg,izon:zone,sek:rep.work});
-  renderLog(); nextRep();
+  renderLog(); saveStore(); nextRep();
 }
 function nextRep(){
   const rep=currentRep(); session.i++;
@@ -870,7 +872,54 @@ $("btnCsv").onclick=()=>{
   a.href=url; a.download="fingerboard-"+new Date().toISOString().slice(0,10)+".csv";
   a.click(); URL.revokeObjectURL(url);
 };
-$("btnClear").onclick=()=>{ log.length=0; renderLog(); };
+$("btnClear").onclick=()=>{ log.length=0; renderLog(); saveStore(); };
+$("btnForget").onclick=forgetAll;
+
+/* ===================== Local storage ===================== */
+/* Everything lives in this browser only. Nothing is uploaded anywhere —
+   the page is static, so there is no server to upload it to. */
+const STORE_KEY="abrahangs.v1";
+const SETTING_IDS=["fPhase","fInjured","fPerDay","fAm","fPm","fProg","fEdge","fHands",
+  "fPct","fWork","fRest","fTol","fReps","fBw","mEdge","mHand","mDur"];
+let storageOK=true;
+function saveStore(){
+  if(!storageOK) return;
+  try{
+    const settings={};
+    for(const id of SETTING_IDS){ const el=$(id); if(el) settings[id]=el.value; }
+    localStorage.setItem(STORE_KEY,JSON.stringify({v:1,maxes,log,settings}));
+  }catch(e){ storageOK=false; noteStorage(); }   // privatläge, full kvot eller blockerad iframe
+}
+function restore(){
+  let d=null;
+  try{ d=JSON.parse(localStorage.getItem(STORE_KEY)); }
+  catch(e){ storageOK=false; noteStorage(); return false; }
+  if(!d||d.v!==1) return false;
+  if(d.maxes) for(const edge of [10,20]) for(const h of ["L","R"]){
+    const v=d.maxes[edge]&&d.maxes[edge][h];
+    if(typeof v==="number"&&isFinite(v)) maxes[edge][h]=v;
+  }
+  if(Array.isArray(d.log)) log.push(...d.log);
+  if(d.settings) for(const id of SETTING_IDS){
+    const el=$(id), v=d.settings[id];
+    if(el&&v!=null&&v!=="") el.value=v;
+  }
+  $("wrapReps").style.display=preset().blocks?"none":"";
+  return true;
+}
+function forgetAll(){
+  if(!confirm("Delete max values, settings and the log from this browser?")) return;
+  try{ localStorage.removeItem(STORE_KEY); }catch(e){}
+  log.length=0;
+  for(const edge of [10,20]) for(const h of ["L","R"]) maxes[edge][h]=null;
+  renderMax(); renderLog();
+}
+function noteStorage(){
+  const el=$("storeNote");
+  if(el) el.textContent=storageOK
+    ? "Max values, settings and the log are saved in this browser. They stay on this device and are lost if you clear site data — download the CSV for anything you want to keep."
+    : "This browser is not letting the page save anything, so the log and your max values will be gone on reload. Private mode or a blocked frame is the usual cause. Download the CSV before you close the tab.";
+}
 
 /* ===================== Start ===================== */
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -888,7 +937,11 @@ $("btNote").innerHTML=navigator.bluetooth
   ? "This browser supports Web Bluetooth. Press <b>Connect</b>, switch the Progressor on and pick it from the list."
   : "This browser, or the frame the page is shown in, gives no access to Web Bluetooth. <b>Connect</b> then starts a demo mode where you hold the mouse button or spacebar down to simulate force.";
 
-renderMax(); syncPreset(); renderWeek(); renderLog();
+const restored=restore();
+renderMax();
+if(restored) refresh(); else syncPreset();
+renderWeek(); renderLog(); noteStorage();
+SETTING_IDS.forEach(id=>{ const el=$(id); if(el) el.addEventListener("change",saveStore); });
 </script>
 </body>
 </html>
