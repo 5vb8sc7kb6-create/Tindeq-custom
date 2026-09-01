@@ -185,6 +185,19 @@ td.g{font-variant-numeric:normal;font-weight:600}
   .slot{grid-template-columns:46px 1fr;row-gap:8px}
   .slot .btn{grid-column:2;justify-self:start}
 }
+/* ---------- sessionsvyn innan passet ----------
+   Kurvan hör till körläget. I startvyn pågår ingen mätning, så där stod den
+   mest still och tog plats från programmet. Kvar blir en smal rad med
+   aktuell kraft, så man ser att givaren svarar innan man trycker start. */
+body:not(.run) #v-pass .stage{grid-template-columns:1fr;gap:0;padding:14px 18px;align-items:center}
+body:not(.run) #v-pass .readout{min-height:0;flex-direction:row;align-items:center;gap:12px}
+body:not(.run) #v-pass .chart,
+body:not(.run) #v-pass .clock,
+body:not(.run) #v-pass .cue,
+body:not(.run) #v-pass .target-line{display:none}
+body:not(.run) #v-pass .phase{margin:0;align-self:center}
+body:not(.run) #v-pass .force{font-size:30px;margin-left:auto}
+body:not(.run) #btnStop,body:not(.run) #btnSkip{display:none}   /* styr passet, hör hemma i körläget */
 /* ---------- körläge ----------
    Under ett pass tar mätaren över hela viewporten: inget att scrolla,
    inga inställningar under, och samma layout hela vägen genom passet. */
@@ -933,7 +946,7 @@ function loopSession(){
   $("force").innerHTML=force.toFixed(1)+"<small>kg</small>";
   $("force").className="force"+(cls?" "+cls:"");
   const nowS=performance.now()/1000, holding=session.phase==="work";
-  if(viewOn("pass")) tracePass.draw({
+  tracePass.draw({                       // körläget är alltid uppe här, kurvan ritas varje bildruta
     t0:holding?session.t0/1000:nowS-IDLE_SPAN,
     span:holding?session.dur:IDLE_SPAN,
     lo,hi,target:rep?rep.target:null,
@@ -1052,17 +1065,26 @@ function makeChart(cv){
     col.grape=cssv("--grape")||"#6C4DF6"; col.mint=cssv("--mint")||"#0FBF8A";
     col.coral=cssv("--coral")||"#FF4E64"; col.soft=cssv("--ink-soft")||"#6E6584";
   }
+  /* Rutan mäts om varje gång den byter storlek. Den ligger gömd i startvyn,
+     så när körläget öppnas är den 1x1 tills den fitts om — utan det ritas
+     kurvan i en ruta som inte finns och skärmen står still. */
+  let last=null;
   function fit(){
     const r=cv.getBoundingClientRect(), d=Math.min(2,window.devicePixelRatio||1);
-    W=Math.max(1,r.width); H=Math.max(1,r.height);
-    cv.width=Math.round(W*d); cv.height=Math.round(H*d);
+    const w=Math.max(1,Math.round(r.width)), h=Math.max(1,Math.round(r.height));
+    const pw=Math.round(w*d), ph=Math.round(h*d);
+    if(W===w&&H===h&&cv.width===pw&&cv.height===ph) return false;
+    W=w; H=h; cv.width=pw; cv.height=ph;
     c.setTransform(d,0,0,d,0,0);
+    return true;                                 // sant bara när något faktiskt ändrats
   }
+  function refit(){ if(fit()) draw(last||{}); }  // ny storlek tömmer duken, så rita om direkt
   readColors(); fit();
-  addEventListener("resize",fit);
+  addEventListener("resize",refit);
+  if(window.ResizeObserver) new ResizeObserver(refit).observe(cv);
 
   function draw(o){
-    o=o||{};
+    o=o||{}; last=o;
     const t0=o.t0!=null?o.t0:performance.now()/1000-IDLE_SPAN;
     const span=o.span>0?o.span:IDLE_SPAN, t1=t0+span;
     const X=t=>((t-t0)/span)*W, Y=kg=>H-(Math.max(0,Math.min(kg,scale))/scale)*H;
@@ -1166,7 +1188,7 @@ function makeChart(cv){
     c.restore();
   }
   function setScale(v){ if(v>0&&isFinite(v)) scale=v; }
-  return {draw,fit,setScale,recolor:readColors};
+  return {draw,fit:refit,setScale,recolor:readColors};
 }
 
 /* ===================== Local storage ===================== */
@@ -1218,9 +1240,10 @@ function noteStorage(){
 /* ===================== Start ===================== */
 const tracePass=makeChart($("cvPass")), traceMax=makeChart($("cvMax"));
 const viewOn=v=>$("v-"+v).classList.contains("on");
+const runOpen=()=>document.body.classList.contains("run");   // passkurvan finns bara i körläget
 function idleDraw(){
   const t=performance.now()/1000-IDLE_SPAN;
-  if(!session.running&&viewOn("pass")) tracePass.draw({t0:t});
+  if(!session.running&&runOpen()) tracePass.draw({t0:t});
   if(!mt.measuring&&viewOn("max")) traceMax.draw({t0:t});
 }
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -1235,7 +1258,7 @@ listeners.push(kg=>{
   const t=performance.now()/1000-IDLE_SPAN;
   if(!session.running){                       // passet ritar sin egen kurva
     $("force").innerHTML=kg.toFixed(1)+"<small>kg</small>";
-    if(viewOn("pass")) tracePass.draw({t0:t});
+    if(runOpen()) tracePass.draw({t0:t});
   }
   if(!mt.measuring){                          // maxtestet likaså — de två är oberoende
     $("mforce").innerHTML=kg.toFixed(1)+"<small>kg</small>";
