@@ -179,6 +179,9 @@ td.g{font-variant-numeric:normal;font-weight:600}
   .slot{grid-template-columns:46px 1fr;row-gap:8px}
   .slot .btn{grid-column:2;justify-self:start}
 }
+.diag{margin:0;padding:12px 14px;background:var(--surface);border:1.5px solid var(--hair);border-radius:var(--r-sm);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:1.55;color:var(--ink-soft);
+  max-height:340px;overflow:auto;white-space:pre-wrap;word-break:break-word}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -333,8 +336,17 @@ td.g{font-variant-numeric:normal;font-weight:600}
   <p class="lede">The percentage is based on your measured half-crimp hold strength on the selected edge. For grips with fewer fingers the target is lowered according to Emil's own effort levels: three-finger drag at the same level as four, front two open at around seventy percent, two-finger crimp at around forty-five. The factors are a translation, not something that has been measured.</p>
 
   <h2>Technical notes</h2>
-  <p class="lede">Web Bluetooth against service 7e4e1701-…, notifications on 1702, commands on 1703. Tare 0x64, start 0x65, stop 0x66. Force as a little-endian float32 in kilos with a microsecond timestamp. Chrome and Edge on desktop and Android; iOS requires Bluefy.</p>
+  <p class="lede">Web Bluetooth against service 7e4e1701-…, notifications on 1702, commands on 1703. Tare 0x64, start 0x65, stop 0x66, firmware 0x6b, battery 0x6f — single-byte writes with response, as in Tindeq's own reference client. Force arrives as a little-endian float32 in kilos with a microsecond timestamp, several samples to a packet. On the device: green means awake, blue means connected, fast blue flashing means it is sending data. Chrome and Edge on desktop and Android; iOS requires Bluefy.</p>
   <div class="note warn" id="btNote"></div>
+
+  <h2>Diagnostics</h2>
+  <p class="lede">If the Progressor connects but no force shows up, this log says how far the conversation got: what was sent to the control point, what came back, and whether any weight packet ever arrived.</p>
+  <div class="row">
+    <button class="btn ghost" id="btnDiag">Show log</button>
+    <button class="btn ghost" id="btnRestart">Send start again</button>
+    <button class="btn ghost" id="btnCopyDiag">Copy</button>
+  </div>
+  <pre class="diag" id="diagBody" hidden></pre>
 </section>
 
 </div>
@@ -345,38 +357,80 @@ td.g{font-variant-numeric:normal;font-weight:600}
 const SVC="7e4e1701-1ea6-40c9-9dcc-13d34ffead57";
 const CDATA="7e4e1702-1ea6-40c9-9dcc-13d34ffead57";
 const CCTRL="7e4e1703-1ea6-40c9-9dcc-13d34ffead57";
-const CMD={TARE:0x64,START:0x65,STOP:0x66,BATTERY:0x6f};
-const bt={dev:null,ctrl:null,data:null,connected:false,streaming:false,lastKind:null,batt:null};
+/* Opcodes as in Tindeq's own reference client: tare 100, start 101, stop 102,
+   firmware version 107, battery 111. Replies come back tagged 0 = command
+   response, 1 = weight, 4 = low battery. */
+const CMD={TARE:0x64,START:0x65,STOP:0x66,VERSION:0x6b,BATTERY:0x6f};
+const RES={ACK:0x00,WEIGHT:0x01,RFD:0x02,RFD_SERIES:0x03,LOWPWR:0x04};
+const bt={dev:null,ctrl:null,data:null,connected:false,streaming:false,
+          pending:null,batt:null,fw:null,samples:0,tared:false,note:""};
 let force=0, demoMode=false;
 const listeners=[];
 function onSample(kg){ force=kg; pushSample(kg); listeners.forEach(f=>f(kg)); }
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const $=id=>document.getElementById(id);
 
+/* --- diagnostics -------------------------------------------------------
+   Everything that goes out and comes back is written down. When the device
+   connects but stays silent this log is the only thing that says where it
+   stopped, so it lives in the interface rather than in the console. */
+const diag=[]; const t0page=performance.now();
+function dlog(msg){
+  const line=((performance.now()-t0page)/1000).toFixed(2)+" s  "+msg;
+  diag.push(line); if(diag.length>300) diag.shift();
+  const el=$("diagBody"); if(el&&!el.hidden){ el.textContent=diag.join("\n"); el.scrollTop=el.scrollHeight; }
+}
+function hex(dv,max){
+  const n=Math.min(dv.byteLength,max||24), a=[];
+  for(let i=0;i<n;i++) a.push(dv.getUint8(i).toString(16).padStart(2,"0"));
+  return a.join(" ")+(dv.byteLength>n?" …":"");
+}
+function props(ch){
+  const p=ch.properties||{};
+  return Object.keys(p).filter(k=>p[k]).join(", ")||"unknown";
+}
+const devName=()=>(bt.dev&&bt.dev.name)||"Progressor";
+
 async function connect(){
   if(!navigator.bluetooth){ startDemo(); return; }
   try{
+    dlog("Asking for a device");
     bt.dev=await navigator.bluetooth.requestDevice({
       filters:[{services:[SVC]},{namePrefix:"Progressor"}], optionalServices:[SVC]});
+    dlog("Picked "+(bt.dev.name||"an unnamed device"));
     bt.dev.addEventListener("gattserverdisconnected",onDisconnect);
     const server=await bt.dev.gatt.connect();
     const svc=await server.getPrimaryService(SVC);
     bt.data=await svc.getCharacteristic(CDATA);
     bt.ctrl=await svc.getCharacteristic(CCTRL);
-    await bt.data.startNotifications();
+    dlog("Data characteristic: "+props(bt.data));
+    dlog("Control point: "+props(bt.ctrl));
+    /* Listen before the subscription goes through, otherwise the first
+       packets can land before anyone is holding the line. */
     bt.data.addEventListener("characteristicvaluechanged",handleNotify);
-    bt.connected=true;
-    setStatus(true,bt.dev.name||"Progressor");
-    await send(CMD.BATTERY,"battery"); await sleep(150);
-    await send(CMD.TARE); await sleep(150);
-    await startStream();
+    await bt.data.startNotifications();
+    dlog("Notifications enabled");
+    q.length=0;
+    bt.connected=true; bt.samples=0; bt.tared=false; bt.note="";
+    setStatus(true,devName());
+    /* A failed command must not read as a failed connection — the device is
+       on the line either way, and the log says which command fell over. */
+    try{
+      await send(CMD.VERSION,"version"); await sleep(250);
+      await send(CMD.BATTERY,"battery"); await sleep(250);
+      await startStream();
+    }catch(e){ dlog("Startup command failed: "+(e&&e.message||e)); }
+    watchdog(); heartbeat();
   }catch(err){
-    if(err&&err.name==="NotFoundError") return;
-    setStatus(false,"Connection failed"); console.error(err);
+    if(err&&err.name==="NotFoundError"){ dlog("No device picked"); return; }
+    setStatus(false,"Connection failed"); dlog("Connection failed: "+(err&&err.message||err)); console.error(err);
   }
 }
 function onDisconnect(){
-  bt.connected=false; bt.streaming=false; setStatus(false,"Disconnected");
+  clearTimeout(wdTimer); clearInterval(hbTimer);
+  bt.connected=false; bt.streaming=false; bt.note="";
+  q.length=0;                                   // no stale command into the next session
+  setStatus(false,"Disconnected"); dlog("Device disconnected");
   if(session.running) stopSession(false);
   abortMax();
 }
@@ -385,26 +439,94 @@ function send(op,tag){ return new Promise((res,rej)=>{ q.push({op,tag,res,rej});
 async function pump(){
   if(busy||!q.length||!bt.ctrl) return;
   busy=true; const job=q.shift();
-  try{ bt.lastKind=job.tag||null; await bt.ctrl.writeValue(new Uint8Array([job.op])); job.res(); }
-  catch(e){ job.rej(e); }
-  await sleep(120); busy=false; pump();
+  const name="0x"+job.op.toString(16)+(job.tag?" ("+job.tag+")":"");
+  try{
+    bt.pending=job.tag||null;
+    const bytes=new Uint8Array([job.op]);
+    /* Tindeq's reference client writes with response. Plain writeValue may
+       fall back to write-without-response, which the firmware ignores. */
+    if(bt.ctrl.writeValueWithResponse) await bt.ctrl.writeValueWithResponse(bytes);
+    else await bt.ctrl.writeValue(bytes);
+    dlog("sent "+name); job.res();
+  }
+  catch(e){ bt.pending=null; dlog("write "+name+" failed: "+(e&&e.message||e)); job.rej(e); }
+  await sleep(150); busy=false; pump();
 }
 function handleNotify(ev){
-  const dv=ev.target.value; if(dv.byteLength<2) return;
-  const kind=dv.getUint8(0), len=dv.getUint8(1);
-  if(kind===0x01){
-    for(let o=2;o+8<=2+len&&o+8<=dv.byteLength;o+=8) onSample(dv.getFloat32(o,true));
-  }else if(kind===0x00){
-    if(bt.lastKind==="battery"&&len>=4){
+  const dv=ev.target.value;
+  if(!dv||dv.byteLength<1){ dlog("empty notification"); return; }
+  const kind=dv.getUint8(0), len=dv.byteLength>1?dv.getUint8(1):0;
+  if(kind===RES.WEIGHT){
+    const end=Math.min(2+len,dv.byteLength); let n=0;
+    for(let o=2;o+8<=end;o+=8){ onSample(dv.getFloat32(o,true)); n++; }
+    if(!bt.samples&&n){ dlog("first weight packet: "+hex(dv)); bt.note=""; setStatus(true,devName()); }
+    bt.samples+=n;
+    /* Zero the scale once the device is actually measuring — taring a
+       standing-still scale is what the reference client never does. */
+    if(n&&!bt.tared){ bt.tared=true; send(CMD.TARE,"tare").catch(()=>{}); }
+  }else if(kind===RES.ACK){
+    const p=bt.pending; bt.pending=null;
+    dlog("reply to "+(p||"command")+": "+hex(dv));
+    if(p==="battery"&&dv.byteLength>=6){
       const raw=dv.getUint32(2,true);
       bt.batt=raw>10000?raw/1000:raw;
-      setStatus(true,(bt.dev&&bt.dev.name)||"Progressor");
+      setStatus(true,devName());
+    }else if(p==="version"&&dv.byteLength>2){
+      try{ bt.fw=new TextDecoder().decode(new Uint8Array(dv.buffer,2,dv.byteLength-2)).replace(/\0+$/,""); dlog("firmware "+bt.fw); }catch(e){}
     }
-    bt.lastKind=null;
+  }else if(kind===RES.LOWPWR){
+    dlog("low battery warning");
+  }else{
+    dlog("unhandled packet type 0x"+kind.toString(16)+": "+hex(dv));
   }
 }
-async function startStream(){ if(bt.connected&&!bt.streaming){ await send(CMD.START); bt.streaming=true; } }
-async function tare(){ if(bt.connected) await send(CMD.TARE); }
+
+/* The device answers commands but stays silent surprisingly often when the
+   start arrives too soon after the subscription. Resend a few times before
+   admitting defeat, and say so on screen rather than sitting at a still zero. */
+/* Counts what was parsed against what actually reached the screen. When the
+   device flashes blue — it is sampling — but the readout sits at zero, this
+   line is what separates a silent radio from a silent interface. */
+let hbTimer=null, hbLast=-1;
+function heartbeat(){
+  clearInterval(hbTimer); hbLast=-1;
+  hbTimer=setInterval(()=>{
+    if(!bt.connected){ clearInterval(hbTimer); return; }
+    if(bt.samples===hbLast) return;
+    hbLast=bt.samples;
+    dlog(bt.samples+" samples parsed · latest "+force.toFixed(1)+" kg · session readout shows "+($("force").textContent||"").trim());
+  },2000);
+}
+
+let wdTimer=null, wdTries=0;
+function watchdog(){
+  clearTimeout(wdTimer); wdTries=0;
+  const tick=()=>{
+    if(!bt.connected||bt.samples>0) return;
+    if(wdTries<3){
+      wdTries++;
+      dlog("no weight data yet — resending start ("+wdTries+"/3)");
+      bt.streaming=false; startStream();
+      wdTimer=setTimeout(tick,1600);
+    }else{
+      dlog("giving up: the device replies to commands but sends no weight data");
+      bt.note="no data"; setStatus(true,devName());
+    }
+  };
+  wdTimer=setTimeout(tick,1600);
+}
+async function startStream(){
+  if(!bt.connected||bt.streaming) return;
+  try{ await send(CMD.START,"start"); bt.streaming=true; }
+  catch(e){ bt.streaming=false; }
+}
+async function tare(){ if(bt.connected) await send(CMD.TARE,"tare").catch(()=>{}); }
+async function restart(){
+  if(!bt.connected){ dlog("nothing to restart — not connected"); return; }
+  bt.streaming=false; bt.samples=0;
+  try{ await send(CMD.STOP,"stop"); await sleep(250); }catch(e){}
+  await startStream(); watchdog();
+}
 
 let demoHold=false, demoVal=0;
 function startDemo(){
@@ -422,7 +544,9 @@ function startDemo(){
 }
 function setStatus(ok,text){
   $("dot").classList.toggle("on",!!ok);
-  let t=text; if(ok&&bt.batt) t+=" · "+bt.batt.toFixed(0)+" mV";
+  let t=text;
+  if(ok&&bt.note) t+=" · "+bt.note;
+  if(ok&&bt.batt) t+=" · "+bt.batt.toFixed(0)+" mV";
   $("devtext").textContent=t;
   $("btnTare").disabled=!bt.connected;
 }
@@ -1078,6 +1202,18 @@ function idleDraw(){
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
 $("btnConnect").onclick=connect;
 $("btnTare").onclick=tare;
+$("btnRestart").onclick=restart;
+$("btnDiag").onclick=()=>{
+  const el=$("diagBody"), show=el.hidden;
+  el.hidden=!show; $("btnDiag").textContent=show?"Hide log":"Show log";
+  if(show){ el.textContent=diag.join("\n")||"Nothing logged yet."; el.scrollTop=el.scrollHeight; }
+};
+$("btnCopyDiag").onclick=async()=>{
+  const text=diag.join("\n")||"Nothing logged yet.";
+  try{ await navigator.clipboard.writeText(text); $("btnCopyDiag").textContent="Copied"; }
+  catch(e){ $("btnCopyDiag").textContent="Copy failed"; }
+  setTimeout(()=>{ $("btnCopyDiag").textContent="Copy"; },1600);
+};
 listeners.push(kg=>{
   const t=performance.now()/1000-IDLE_SPAN;
   if(!session.running){                       // passet ritar sin egen kurva

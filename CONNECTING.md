@@ -13,7 +13,7 @@ Knappnamnen nedan följer appens engelska gränssnitt (**Connect**, **Tare**, **
 
 ## Anslut, steg för steg
 
-1. **Rigga och väck dosan.** Förankra Progressorn i något stabilt — räcke, krok, ribbstol — och häng listen eller blocket under. Tryck sedan på knappen på dosan så att lampan börjar blinka: då annonserar den och går att hitta. Den somnar om efter en stund utan anslutning, så väck den strax innan du ansluter.
+1. **Rigga och väck dosan.** Förankra Progressorn i något stabilt — räcke, krok, ribbstol — och häng listen eller blocket under. Tryck sedan på knappen på dosan så att lampan tänds **grönt**: då är den vaken och annonserar. Den somnar om efter en stund utan anslutning, så väck den strax innan du ansluter.
 
 2. **Tryck på Connect i appen** (uppe till höger). Webbläsaren öppnar en lista över Bluetooth-enheter i närheten.
 
@@ -21,7 +21,7 @@ Knappnamnen nedan följer appens engelska gränssnitt (**Connect**, **Tare**, **
 
 4. **Vänta in den gröna pricken.** Appen läser av batteriet, nollar vågen och börjar strömma. Statuspillret växlar från "No device" till t.ex. "Progressor_1234 · 3021 mV" — grön prick betyder ansluten, siffran är batterispänningen.
 
-5. **Kontrollera med ett drag.** Dra lätt i listen. Kilosiffran ska röra sig direkt och kurvan följa handen. Gör den det är du klar — välj program och tryck **Start session**.
+5. **Kontrollera med ett drag.** Lampan på dosan ska nu lysa **blått** — blått betyder ansluten, och snabbt blinkande blått betyder att den skickar mätvärden. Dra lätt i listen. Kilosiffran ska röra sig direkt och kurvan följa handen. Gör den det är du klar — välj program och tryck **Start session**.
 
    Nollningen sker med det som hänger i dosan just då, och appen nollar även automatiskt när ett pass startar. Låt därför riggen hänga stilla och obelastad vid anslutning och start. Byter du block: häng på det nya, låt det hänga fritt och tryck **Tare**.
 
@@ -29,11 +29,13 @@ Knappnamnen nedan följer appens engelska gränssnitt (**Connect**, **Tare**, **
 
 ## Om det strular
 
-**Progressorn syns inte i listan.** Nästan alltid: den har somnat — tryck på knappen så lampan blinkar, och sök igen. Annars: stäng Tindeqs egen app om den är igång på en telefon i närheten. Bluetooth tillåter bara en anslutning åt gången, och en dosa som redan är upptagen annonserar inte.
+**Progressorn syns inte i listan.** Nästan alltid: den har somnat — tryck på knappen så lampan lyser grönt, och sök igen. Annars: stäng Tindeqs egen app om den är igång på en telefon i närheten. Bluetooth tillåter bara en anslutning åt gången, och en dosa som redan är upptagen annonserar inte.
 
 **Knappen startar demoläget i stället.** Webbläsaren saknar Web Bluetooth, eller så visas sidan över en osäker anslutning. Använd Chrome eller Edge över https — på iPhone/iPad: Bluefy.
 
-**Ansluten, men siffran står stilla på 0.0.** Tryck **Tare** och dra igen. Hjälper inte det: ladda om sidan, väck dosan och anslut på nytt.
+**Ansluten, men siffran står stilla på 0.0.** Titta först på lampan. Blinkar den blått skickar dosan redan mätvärden, och felet sitter mellan radion och skärmen. Tryck **Tare** och dra igen; hjälper inte det, gå till fliken **Evidence**, tryck **Send start again** och sedan **Show log**.
+
+Loggen säger vad som hänt: rader som `sent 0x65 (start)` men inget `first weight packet` betyder att dosan aldrig svarar med vikt. Kommer det i stället rader som `120 samples parsed · latest 14.2 kg · session readout shows 0.0kg` så tas mätvärdena emot men fastnar på vägen till skärmen. **Copy** lägger hela loggen på urklipp — klistra in den i en felanmälan, den är det som går att felsöka på.
 
 **Kontakten bryts mitt i ett pass.** Appen avbryter då passet och maxtestet självt — inget halvfärdigt värde sparas. Väck dosan, tryck Connect och starta om passet. Bryts det ofta: kortare avstånd mellan dosa och skärm, och kolla batterisiffran i statuspillret — en fräsch cell ligger kring 3000 mV, och en bra bit därunder är batteriet första misstänkta.
 
